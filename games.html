@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14181C">
+<title>생활 속 상황극 · 어르신 상황극 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+<style>
+  html,body{ overflow-y:auto; }
+  #app{ min-height:100%; padding-top:var(--safe-top); padding-bottom:calc(20px + var(--safe-bottom)); }
+  #topbar{ display:flex; align-items:center; gap:10px; padding:14px 16px 4px; }
+  #homeBtn{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+  #topbar h1{ font-size:17px; margin:0; }
+  .sub{ padding:0 16px 16px; font-size:13px; color:var(--ink-dim); }
+  .grid{ padding:0 16px; display:flex; flex-direction:column; gap:12px; }
+  .card{ display:flex; align-items:center; gap:14px; background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:16px; }
+  .card .icon{ width:50px; height:50px; border-radius:12px; background:var(--bg-panel-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+  .card .title{ font-size:15.5px; font-weight:700; margin-bottom:3px; }
+  .card .desc{ font-size:12px; color:var(--ink-dim); line-height:1.5; }
+  .card .chev{ margin-left:auto; color:var(--ink-faint); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar"><a id="homeBtn" href="index.html">&#8592;</a><h1>생활 속 상황극</h1></div>
+  <div class="sub">일상에서 어르신이 자주 마주치는 4가지 상황을 직접 체험해보세요</div>
+  <div class="grid">
+    <a class="card" href="games/pillbox.html">
+      <div class="icon">&#128138;</div>
+      <div><div class="title">약상자 정리하기</div><div class="desc">처방대로 요일별 약통에 알약을 정확히 담아보세요</div></div>
+      <div class="chev">&#8250;</div>
+    </a>
+    <a class="card" href="games/hospital.html">
+      <div class="icon">&#127973;</div>
+      <div><div class="title">병원 길찾기</div><div class="desc">안내판을 보고 목적지 진료과를 정확히 찾아가보세요</div></div>
+      <div class="chev">&#8250;</div>
+    </a>
+    <a class="card" href="games/objects.html">
+      <div class="icon">&#128269;</div>
+      <div><div class="title">집안 물건 찾기</div><div class="desc">거실 사진 속에서 요청받은 물건을 짚어보세요</div></div>
+      <div class="chev">&#8250;</div>
+    </a>
+    <a class="card" href="games/cafe.html">
+      <div class="icon">&#9749;</div>
+      <div><div class="title">카페 주문하기</div><div class="desc">복잡한 메뉴판에서 주문받은 음료를 정확히 골라보세요</div></div>
+      <div class="chev">&#8250;</div>
+    </a>
+  </div>
+</div>
+</body>
+</html>

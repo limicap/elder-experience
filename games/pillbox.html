@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14181C">
+<title>약상자 정리하기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/theme.css">
+<style>
+  html,body{ overflow-y:auto; }
+  #app{ min-height:100%; padding-top:var(--safe-top); padding-bottom:calc(20px + var(--safe-bottom)); }
+  #topbar{ display:flex; align-items:center; gap:10px; padding:14px 16px 4px; }
+  #homeBtn{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+  #topbar h1{ font-size:16px; margin:0; }
+  .wrap{ padding:14px 16px; }
+  .card{ background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; }
+  .eyebrow{ font-size:10.5px; color:var(--amber); font-weight:700; letter-spacing:.06em; margin-bottom:4px; }
+  .rx{ font-size:14px; line-height:1.9; }
+  .rx b{ color:var(--amber); }
+  .slots{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0; }
+  .slot{ aspect-ratio:1/1; border-radius:12px; border:2px dashed var(--line); background:var(--bg-panel-2); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; color:var(--ink-faint); position:relative; }
+  .slot.filled{ border-style:solid; border-color:var(--sage); background:rgba(122,148,113,.14); color:var(--sage); }
+  .slot .lbl{ font-weight:700; font-size:12px; }
+  .pool{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .pill{ padding:10px 14px; border-radius:20px; border:1.5px solid var(--line); background:var(--bg-panel-2); font-size:13px; font-weight:700; }
+  .pill.used{ opacity:.25; pointer-events:none; }
+  .pill.sel{ border-color:var(--amber); color:var(--amber); }
+  .bigbtn{ background:var(--amber); color:#1B1300; border:none; font-weight:700; font-size:15px; padding:13px 24px; border-radius:26px; width:100%; }
+  .ghostbtn{ background:var(--bg-panel-2); color:var(--ink-dim); border:1px solid var(--line); font-weight:700; font-size:13px; padding:10px 18px; border-radius:22px; width:100%; margin-top:8px; }
+  .result{ text-align:center; }
+  .result .score{ font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:900; color:var(--amber); margin:8px 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar"><a id="homeBtn" href="../games.html">&#8592;</a><h1>약상자 정리하기</h1></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="eyebrow">오늘의 처방</div>
+      <div class="rx" id="rxText"></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">약을 눌러 선택한 뒤, 담을 시간대를 눌러주세요</div>
+      <div class="pool" id="pool"></div>
+      <div class="slots" id="slots"></div>
+      <button class="bigbtn" id="btnCheck">다 담았어요 · 확인하기</button>
+    </div>
+    <div class="card result" id="resultCard" style="display:none;">
+      <div class="eyebrow">결과</div>
+      <div class="score" id="scoreText">0 / 0</div>
+      <div style="font-size:13px;color:var(--ink-dim);line-height:1.7;">
+        약 이름과 색이 비슷하면 헷갈리기 쉽습니다.<br>
+        어르신께는 시간대별로 미리 나눠드리고, 큰 글씨로 적어드리면 실수를 줄일 수 있어요.
+      </div>
+      <button class="ghostbtn" id="btnRetry">다시 해보기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const RX = [
+  {name:'혈압약', time:'아침'},
+  {name:'혈당약', time:'아침'},
+  {name:'소화제', time:'점심'},
+  {name:'영양제', time:'저녁'},
+  {name:'수면제', time:'저녁'},
+];
+const TIMES = ['아침','점심','저녁'];
+
+const rxText = document.getElementById('rxText');
+rxText.innerHTML = RX.map(r=>`<b>${r.time}</b> — ${r.name} 1알<br>`).join('');
+
+const pool = document.getElementById('pool');
+const slots = document.getElementById('slots');
+let placed = {}; // name -> time
+let selected = null;
+
+function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]); }
+
+function buildPool(){
+  pool.innerHTML='';
+  shuffle(RX).forEach(r=>{
+    const b = document.createElement('div');
+    b.className='pill'; b.textContent=r.name; b.dataset.name=r.name;
+    b.addEventListener('click', ()=>{
+      if(b.classList.contains('used')) return;
+      [...pool.children].forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+      selected = r.name;
+    });
+    pool.appendChild(b);
+  });
+}
+function buildSlots(){
+  slots.innerHTML='';
+  TIMES.forEach(t=>{
+    const s = document.createElement('div');
+    s.className='slot'; s.innerHTML = `<div class="lbl">${t}</div><div class="cnt">비어있음</div>`;
+    s.addEventListener('click', ()=>{
+      if(!selected) return;
+      placed[selected] = t;
+      const btn = [...pool.children].find(x=>x.dataset.name===selected);
+      if(btn) btn.classList.add('used');
+      selected = null;
+      renderSlots();
+    });
+    slots.appendChild(s);
+  });
+}
+function renderSlots(){
+  [...slots.children].forEach((s,i)=>{
+    const t = TIMES[i];
+    const names = Object.keys(placed).filter(n=>placed[n]===t);
+    s.classList.toggle('filled', names.length>0);
+    s.querySelector('.cnt').textContent = names.length? names.join(', ') : '비어있음';
+  });
+}
+buildPool(); buildSlots();
+
+document.getElementById('btnCheck').addEventListener('click', ()=>{
+  let correct=0;
+  RX.forEach(r=>{ if(placed[r.name]===r.time) correct++; });
+  document.getElementById('scoreText').textContent = `${correct} / ${RX.length}`;
+  document.getElementById('resultCard').style.display='block';
+  document.getElementById('resultCard').scrollIntoView({behavior:'smooth'});
+});
+document.getElementById('btnRetry').addEventListener('click', ()=>{
+  placed = {}; selected=null;
+  document.getElementById('resultCard').style.display='none';
+  buildPool(); buildSlots();
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="시각체험">
+<meta name="theme-color" content="#14181C">
+<title>시각 체험 · 어르신 안질환 카메라 체험</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+<style>
+  html,body{ overflow:hidden; }
+  #app{ position:fixed; inset:0; display:flex; flex-direction:column; }
+
+  /* ---------- STAGE (camera) ---------- */
+  #stage{ position:relative; flex:1; min-height:0; background:#000; overflow:hidden; }
+  #stage video{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; background:#000;
+  }
+  #videoNormal{ z-index:1; }
+  #simWrap{ position:absolute; inset:0; z-index:2; overflow:hidden; clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
+  #videoSim{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  #videoGhost{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; mix-blend-mode:screen; }
+
+  .overlay{ position:absolute; inset:0; pointer-events:none; }
+  #ovVignette{ background:transparent; opacity:0; transition:opacity .25s; }
+  #ovHaze{ background:rgba(230,222,200,0.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); opacity:0; transition:opacity .25s,background .25s; }
+  #ovGlare{ background:radial-gradient(circle at 50% 42%, rgba(255,252,235,.9), rgba(255,252,235,0) 62%); opacity:0; transition:opacity .25s; mix-blend-mode:screen; }
+  #ovCentral{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:46%; height:46%; border-radius:50%; opacity:0;
+    transition:opacity .25s, filter .25s, width .25s, height .25s;
+    background:rgba(10,10,8,0.55); backdrop-filter:blur(18px) brightness(.5); -webkit-backdrop-filter:blur(18px) brightness(.5);
+  }
+  #ovHemi{ position:absolute; top:0; bottom:0; width:50%; opacity:0; background:#050505; transition:opacity .25s, width .25s; }
+  .floater{
+    position:absolute; border-radius:46% 54% 60% 40%/50% 40% 60% 50%;
+    background:rgba(8,8,6,0.62); backdrop-filter:blur(6px) brightness(.55); -webkit-backdrop-filter:blur(6px) brightness(.55);
+    opacity:0; transition:opacity .25s; animation:drift 9s ease-in-out infinite;
+  }
+  @keyframes drift{ 0%,100%{transform:translate(0,0)} 50%{transform:translate(4px,-3px)} }
+
+  #divider{ position:absolute; top:0; bottom:0; left:50%; width:0; z-index:5; touch-action:none; }
+  #divider .line{ position:absolute; top:0; bottom:0; left:-1px; width:2px; background:rgba(238,234,226,0.85); box-shadow:0 0 12px rgba(0,0,0,.5); }
+  #divider .handle{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:52px; height:52px; border-radius:50%; background:var(--bg-panel); border:2px solid var(--amber);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,.45);
+  }
+  #divider .handle svg{ width:22px; height:22px; }
+  .side-tag{
+    position:absolute; top:14px; z-index:4; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12.5px;
+    letter-spacing:.06em; color:rgba(238,234,226,.9); background:rgba(20,24,28,.55); padding:4px 9px; border-radius:20px;
+    border:1px solid rgba(238,234,226,.18); pointer-events:none;
+  }
+  #tagLeft{ left:14px; } #tagRight{ right:14px; }
+
+  #homeBtn{
+    position:absolute; z-index:11; top:calc(var(--safe-top) + 8px); left:10px;
+    width:34px; height:34px; border-radius:50%; background:rgba(20,24,28,.55); border:1px solid rgba(238,234,226,.18);
+    display:flex; align-items:center; justify-content:center; color:var(--ink); font-size:16px; text-decoration:none;
+  }
+
+  #permOverlay{
+    position:absolute; inset:0; z-index:20; background:var(--bg-deep);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; gap:14px;
+  }
+  #permOverlay h2{ margin:0; font-size:19px; }
+  #permOverlay p{ margin:0; color:var(--ink-dim); font-size:14px; line-height:1.6; max-width:320px; }
+  #permOverlay button{
+    margin-top:8px; background:var(--amber); color:#1B1300; border:none; font-family:'Noto Sans KR',sans-serif;
+    font-weight:700; font-size:15px; padding:12px 26px; border-radius:30px; cursor:pointer;
+  }
+  #permOverlay .err{ color:var(--brick); font-size:12.5px; margin-top:4px; }
+
+  #topbar{
+    position:absolute; top:0; left:0; right:0; z-index:10; padding:calc(var(--safe-top) + 10px) 14px 40px 52px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:linear-gradient(to bottom, rgba(0,0,0,.55), transparent); pointer-events:none;
+  }
+  #condName{ display:flex; align-items:center; gap:8px; }
+  #recDot{ width:8px; height:8px; border-radius:50%; background:var(--brick); box-shadow:0 0 8px var(--brick); animation:pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.35} }
+  #condName span.n{ font-weight:700; font-size:15px; }
+  #acuityBadge{ font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--bg-deep); background:var(--amber); padding:3px 8px; border-radius:5px; white-space:nowrap; }
+
+  #panel{ background:var(--bg-panel); border-top:1px solid var(--line); padding-bottom:var(--safe-bottom); flex-shrink:0; }
+  .grouplbl{ padding:10px 14px 0; font-size:10.5px; font-weight:700; letter-spacing:.08em; color:var(--ink-faint); }
+  #chips{ display:flex; gap:8px; padding:6px 14px 4px; overflow-x:auto; scrollbar-width:none; }
+  #chips2{ display:flex; gap:8px; padding:0 14px 4px; overflow-x:auto; scrollbar-width:none; }
+  #chips::-webkit-scrollbar,#chips2::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:8px 12px;
+    border-radius:12px; border:1px solid var(--line); background:var(--bg-panel-2); cursor:pointer; user-select:none;
+  }
+  .chip .t{ font-size:13px; font-weight:700; }
+  .chip .a{ font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--ink-faint); }
+  .chip.active{ border-color:var(--amber); background:rgba(217,164,65,0.12); }
+  .chip.active .t{ color:var(--amber); }
+
+  #subChips{ display:none; gap:8px; padding:0 14px 8px; overflow-x:auto; }
+  #subChips.show{ display:flex; }
+  .subchip{ flex:0 0 auto; padding:6px 12px; border-radius:20px; font-size:12.5px; border:1px solid var(--line); background:transparent; color:var(--ink-dim); cursor:pointer; }
+  .subchip.active{ border-color:var(--amber); color:var(--amber); }
+
+  #stageRow{ display:none; gap:8px; padding:4px 14px 2px; }
+  #stageRow.show{ display:flex; }
+  .stagebtn{
+    flex:1; padding:9px 4px; border-radius:10px; font-size:12.5px; font-weight:700; text-align:center;
+    border:1px solid var(--line); background:transparent; color:var(--ink-dim); cursor:pointer;
+  }
+  .stagebtn.active{ border-color:var(--brick); background:rgba(176,87,74,.16); color:#E2A79E; }
+
+  #severityRow{ padding:10px 16px 4px; }
+  #severityRow .lbl{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  #severityRow .lbl .lt{ font-size:12.5px; color:var(--ink-dim); }
+  #severityRow .lbl .lv{ font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700; color:var(--amber); }
+  input[type=range]{ -webkit-appearance:none; width:100%; height:26px; background:transparent; }
+  input[type=range]::-webkit-slider-runnable-track{ height:4px; background:var(--line); border-radius:2px; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; margin-top:-8px; border-radius:50%; background:var(--amber); border:3px solid var(--bg-panel); box-shadow:0 0 0 1px var(--amber); }
+  input[type=range]::-moz-range-track{ height:4px; background:var(--line); border-radius:2px; }
+  input[type=range]::-moz-range-thumb{ width:14px; height:14px; border-radius:50%; background:var(--amber); border:3px solid var(--bg-panel); }
+
+  #tipsToggle{
+    width:100%; background:none; border:none; border-top:1px solid var(--line); color:var(--ink-dim);
+    font-family:'Noto Sans KR',sans-serif; font-size:13px; padding:12px 16px; display:flex; align-items:center;
+    justify-content:space-between; margin-top:6px; cursor:pointer;
+  }
+  #tipsToggle .car{ transition:transform .2s; }
+  #tipsToggle.open .car{ transform:rotate(180deg); }
+  #tipsBody{ max-height:0; overflow:hidden; transition:max-height .28s ease; padding:0 16px; }
+  #tipsBody.open{ max-height:280px; padding-bottom:14px; overflow-y:auto; }
+  #tipsBody .desc{ font-size:13.5px; line-height:1.65; color:var(--ink); margin:6px 0 12px; }
+  #tipsBody .tiplbl{ font-size:11.5px; color:var(--amber); font-weight:700; letter-spacing:.03em; margin-bottom:6px; }
+  #tipsBody ul{ margin:0; padding-left:18px; }
+  #tipsBody li{ font-size:13px; line-height:1.7; color:var(--ink-dim); margin-bottom:4px; }
+
+  #hint{ text-align:center; font-size:10px; color:var(--ink-faint); padding:6px 0 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="stage">
+    <video id="videoNormal" autoplay playsinline muted></video>
+
+    <div id="simWrap">
+      <video id="videoSim" autoplay playsinline muted></video>
+      <video id="videoGhost" autoplay playsinline muted></video>
+      <div class="overlay" id="ovHaze"></div>
+      <div class="overlay" id="ovGlare"></div>
+      <div class="overlay" id="ovVignette"></div>
+      <div class="overlay" id="ovHemi"></div>
+      <div class="overlay"><div id="ovCentral"></div></div>
+      <div class="overlay" id="ovFloaters"></div>
+    </div>
+
+    <a id="homeBtn" href="index.html">&#8592;</a>
+    <div class="side-tag" id="tagLeft">1 &middot; 정상 시야</div>
+    <div class="side-tag" id="tagRight">2 &middot; 체험 중</div>
+
+    <div id="divider">
+      <div class="line"></div>
+      <div class="handle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#D9A441" stroke-width="2" stroke-linecap="round">
+          <path d="M4 12h4M16 12h4M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/>
+        </svg>
+      </div>
+    </div>
+
+    <div id="topbar">
+      <div id="condName"><span id="recDot"></span><span class="n" id="condLabel">백내장</span></div>
+      <span class="mono" id="acuityBadge">20/200</span>
+    </div>
+
+    <div id="permOverlay">
+      <h2>카메라로 체험해보세요</h2>
+      <p>이 앱은 카메라 화면에 실시간으로 필터를 입혀<br>어르신이 겪는 시야를 그대로 재현합니다.<br>카메라 접근을 허용해주세요.</p>
+      <button id="btnStart">카메라 시작하기</button>
+      <p class="err" id="permErr"></p>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div class="grouplbl">노화성 안질환 &middot; 8종</div>
+    <div id="chips"></div>
+    <div class="grouplbl">일반 시각장애 &middot; 5종</div>
+    <div id="chips2"></div>
+    <div id="subChips"></div>
+
+    <div id="stageRow">
+      <button class="stagebtn" data-stage="1">&#9679; 초기</button>
+      <button class="stagebtn" data-stage="2">&#9679;&#9679; 중기</button>
+      <button class="stagebtn" data-stage="3">&#9679;&#9679;&#9679; 말기</button>
+    </div>
+
+    <div id="severityRow">
+      <div class="lbl"><span class="lt" id="sevLabel">체험 강도</span><span class="lv mono" id="sevValue">55%</span></div>
+      <input type="range" id="severity" min="0" max="100" value="55">
+    </div>
+
+    <button id="tipsToggle"><span>이 질환을 가진 어르신, 이렇게 어려워해요</span><span class="car">&#9662;</span></button>
+    <div id="tipsBody">
+      <div class="desc" id="tipsDesc"></div>
+      <div class="tiplbl">사회복무요원 응대 팁</div>
+      <ul id="tipsList"></ul>
+    </div>
+    <div id="hint">손잡이를 좌우로 밀어 1(정상)&middot;2(체험) 시야를 비교해보세요</div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const CB_MATRIX = {
+    protanopia:   "0.567 0.433 0 0 0  0.558 0.442 0 0 0  0 0.242 0.758 0 0  0 0 0 1 0",
+    deuteranopia: "0.625 0.375 0 0 0  0.70 0.30 0 0 0  0 0.30 0.70 0 0  0 0 0 1 0",
+    tritanopia:   "0.95 0.05 0 0 0  0 0.433 0.567 0 0  0 0.475 0.525 0 0  0 0 0 1 0"
+  };
+
+  // ---------- 노화성 안질환 8종 ----------
+  const AGING = [
+    { id:'cataract', name:'백내장', acuity:'20/200', group:'aging',
+      desc:'수정체가 뿌옇게 흐려져 안개가 낀 것처럼 보이고, 밝은 빛은 번지듯 퍼져 보입니다. 전체적으로 색이 누렇게 바래 보이기도 해요.',
+      tips:['조명을 밝게 하되 창가 역광·직사광은 피해주세요','글씨는 크고 굵게, 대비가 뚜렷한 자료를 준비하세요','서류 서명란은 손으로 짚어 안내해주세요'],
+      apply(t){ const e=Math.pow(t,1.7);
+        return { filter:`blur(${1+6*e}px) contrast(${100-55*e}%) saturate(${100-40*e}%) sepia(${12+28*e}%) brightness(${100+3*t}%)`, haze:e }; } },
+    { id:'glaucoma', name:'녹내장', acuity:'터널 시야', group:'aging',
+      desc:'주변 시야부터 좁아져 통 속을 들여다보듯 가운데 좁은 영역만 보입니다. 말기에는 바늘구멍처럼 극도로 좁아져요.',
+      tips:['옆·뒤에서 갑자기 말을 걸거나 손대지 마세요','정면으로 천천히 다가가 인기척을 먼저 알려주세요','이동 중 발밑 턱이나 장애물을 말로 알려주세요'],
+      apply(t){ return { filter:`contrast(${100+8*t}%) blur(${t*1.4}px)`, vignette: t<0.34?t*0.6 : t }; } },
+    { id:'amd', name:'황반변성', acuity:'20/400 · 중심부', group:'aging',
+      desc:'시야 한가운데가 검게 얼룩지거나 지워져 마주 본 얼굴·글자의 가운데를 알아보기 어렵습니다. 말기엔 암점 가장자리가 뚜렷해져요.',
+      tips:['정면보다 옆에서 살짝 비켜 서면 더 잘 보일 수 있어요','중요한 내용은 글씨보다 말로 또박또박 전달해주세요','작은 글씨 서류는 대신 소리 내어 읽어주세요'],
+      apply(t){ return { filter:`contrast(${100-8*t}%) saturate(${100-6*t}%)`, central:t, centralHard: t>0.66 }; } },
+    { id:'diabetic', name:'당뇨망막병증', acuity:'반점형 시야손실', group:'aging',
+      desc:'망막 곳곳이 손상돼 시야에 불규칙한 검은 얼룩이 흩어져 나타납니다. 말기(증식성)에는 유리체 출혈로 시야가 붉게 물들기도 해요.',
+      tips:['같은 물건도 여러 각도에서 다시 보여주세요','바닥 턱·계단은 특히 미리 안내해주세요','시야에 빈 곳이 있을 수 있으니 천천히, 자주 확인하며 설명해주세요'],
+      apply(t){ const bloody = t>0.75;
+        return { filter:`blur(${1+6*t}px) contrast(${100-30*t}%) brightness(${100-10*t}%) ${bloody?`sepia(${(t-0.75)*140}%) saturate(${100+ (t-0.75)*260}%)`:''}`,
+                 vignette:t*0.35, floaters:t }; } },
+    { id:'presbyopia', name:'노안', acuity:'근거리 시력저하', group:'aging',
+      desc:'수정체 탄력이 떨어져 가까운 글씨에 초점을 맞추기 어렵습니다. 먼 곳은 잘 보이지만 가까운 글씨는 흐릿하게 겹쳐 보여요.',
+      tips:['서류·화면은 눈에서 조금 떨어뜨려 보여주세요','작고 가는 글씨보다 크고 굵은 글씨 자료를 준비하세요','밝은 조명 아래서 보여주면 훨씬 잘 보여요'],
+      apply(t){ return { filter:`blur(${2+3*t}px) contrast(${100-16*t}%)` }; } },
+    { id:'rp', name:'망막색소변성증', acuity:'야간·주변시야 소실', group:'aging',
+      desc:'주변 시야부터 서서히 사라져 마치 좁은 원통 속에서 보는 듯하며, 특히 어두운 곳에서 더욱 심해집니다. 녹내장과 비슷하지만 진행이 더 고르게 전체 둘레에서 옵니다.',
+      tips:['어두운 실내·저녁 시간엔 더 신중히 안내해주세요','시야 가장자리에서 다가가면 놀랄 수 있어요, 정면으로 접근하세요','바닥 색이 비슷한 문턱은 꼭 말로 짚어주세요'],
+      apply(t){ return { filter:`brightness(${100-14*t}%) contrast(${100+6*t}%)`, vignette:t*0.95, vignetteSoft:true }; } },
+    { id:'hemianopia', name:'반맹', acuity:'좌/우 시야 절반 소실', group:'aging',
+      desc:'뇌졸중 등으로 시야의 절반(주로 한쪽)이 통째로 보이지 않습니다. 정면을 보고 있어도 한쪽에서 다가오는 사람이나 물건을 전혀 인지하지 못해요.',
+      tips:['보이지 않는 쪽에서 다가가면 놀랄 수 있어요, 보이는 쪽으로 접근하세요','중요한 물건·서류는 보이는 쪽에 놓아주세요','고개를 돌려 확인하는 습관을 안내해드리면 도움이 돼요'],
+      apply(t){ return { hemi:t }; } },
+    { id:'floaters_dz', name:'비문증', acuity:'날파리 부유물 시야', group:'aging',
+      desc:'유리체 혼탁으로 눈앞에 실이나 날파리 같은 것이 둥둥 떠다니는 것처럼 보입니다. 밝은 배경을 볼 때 특히 두드러져요.',
+      tips:['밝은 벽이나 하늘을 보며 대화할 때 더 불편해할 수 있어요','갑자기 부유물이 급격히 늘면 병원 진료가 필요할 수 있다고 안내해주세요','시야 방해로 놓치는 물건이 있는지 한 번 더 확인해주세요'],
+      apply(t){ return { filter:`contrast(${100+4*t}%)`, floaters:t*1.15 }; } },
+  ];
+
+  // ---------- 일반 시각장애 5종 ----------
+  const GENERAL = [
+    { id:'diplopia', name:'복시·양안시장애', acuity:'이중 시야', group:'general',
+      desc:'양쪽 눈의 상이 어긋나게 맞춰져 사물이 둘로 겹쳐 보입니다. 거리 판단이 어려워 계단이나 문턱에서 발을 헛디디기 쉬워요.',
+      tips:['계단·문턱은 손으로 짚어드리며 안내해주세요','물건을 건넬 땐 손에 닿기 직전까지 천천히 다가가주세요','갑자기 생긴 복시는 병원 진료가 필요할 수 있어요'],
+      apply(t){ return { filter:`contrast(${100-4*t}%)`, ghost:t }; } },
+    { id:'colorblind', name:'색각장애', acuity:'색 구분 저하', group:'general',
+      sub:['protanopia','deuteranopia','tritanopia'],
+      subLabel:{ protanopia:'적색맹', deuteranopia:'녹색맹', tritanopia:'청황색맹' },
+      desc:'특정 색상을 구분하기 어렵습니다. 붉은색·초록색 계열이 비슷하게 보이거나, 파랑과 노랑 구분이 어려운 경우도 있어요.',
+      tips:['색상만으로 구분되는 안내(빨간 버튼=위험 등)는 모양이나 글자도 함께 알려주세요','신호등·표지판 설명 시 위치까지 함께 말씀해주세요','약봉투는 색보다 글씨 크기로 구분해드리세요'],
+      apply(t, sub){ return { colorblind:sub, colorblindT:t }; } },
+    { id:'refractive', name:'굴절장애', acuity:'초점 흐림', group:'general',
+      desc:'각막·수정체의 굴절 이상으로 상이 망막에 정확히 맺히지 않아 전반적으로 뿌옇게 보입니다. 근시·원시·난시가 여기에 해당해요.',
+      tips:['안경을 쓰고 계신지, 도수가 맞는지 여쭤봐주세요','자료는 적정 거리를 두고 천천히 보여주세요','작은 글씨는 확대해서 보여주세요'],
+      apply(t){ return { filter:`blur(${1+5*t}px)` }; } },
+    { id:'accommodative', name:'조절장애', acuity:'초점 전환 지연', group:'general',
+      desc:'가까운 곳과 먼 곳 사이에서 초점을 빠르게 바꾸지 못합니다. 화면을 보다 사람 얼굴을 보면 한동안 흐릿하게 보여요.',
+      tips:['화면과 사람을 번갈아 봐야 할 땐 잠시 기다려주세요','시선을 옮기시라고 미리 말씀해주시면 도움이 돼요','급하게 초점을 요구하는 상황은 피해주세요'],
+      apply(t){ return { filter:`blur(${1.5+2.5*t}px) contrast(${100-10*t}%)` }; } },
+    { id:'glare', name:'광각장애(눈부심)', acuity:'빛 번짐·눈부심', group:'general',
+      desc:'빛에 예민해져 조명이나 창밖 햇빛이 하얗게 번져 보이고, 밝은 곳에서 오히려 시야가 더 나빠집니다.',
+      tips:['정면 조명이나 창가 역광을 피해 자리를 안내해주세요','스마트폰·화면 밝기를 낮춰드리는 것도 도움이 돼요','실내외 이동 시 눈이 적응할 시간을 주세요'],
+      apply(t){ return { filter:`brightness(${100+4*t}%) contrast(${100-6*t}%)`, glare:t }; } },
+  ];
+
+  const CONDITIONS = AGING.concat(GENERAL);
+  let currentCond = CONDITIONS[0];
+  let currentSub = 'protanopia';
+  let severity = 55;
+
+  const videoNormal = document.getElementById('videoNormal');
+  const videoSim = document.getElementById('videoSim');
+  const videoGhost = document.getElementById('videoGhost');
+  const ovHaze = document.getElementById('ovHaze');
+  const ovGlare = document.getElementById('ovGlare');
+  const ovVignette = document.getElementById('ovVignette');
+  const ovHemi = document.getElementById('ovHemi');
+  const ovCentral = document.getElementById('ovCentral');
+  const ovFloaters = document.getElementById('ovFloaters');
+  const chipsEl = document.getElementById('chips');
+  const chips2El = document.getElementById('chips2');
+  const subChipsEl = document.getElementById('subChips');
+  const stageRow = document.getElementById('stageRow');
+  const condLabel = document.getElementById('condLabel');
+  const acuityBadge = document.getElementById('acuityBadge');
+  const sevInput = document.getElementById('severity');
+  const sevLabel = document.getElementById('sevLabel');
+  const sevValue = document.getElementById('sevValue');
+  const tipsToggle = document.getElementById('tipsToggle');
+  const tipsBody = document.getElementById('tipsBody');
+  const tipsDesc = document.getElementById('tipsDesc');
+  const tipsList = document.getElementById('tipsList');
+
+  const FLOATER_SPOTS = [
+    {l:'18%',t:'26%',w:'13%',h:'10%', delay:'0s'},
+    {l:'62%',t:'18%',w:'10%',h:'8%', delay:'1.4s'},
+    {l:'30%',t:'62%',w:'16%',h:'12%', delay:'2.6s'},
+    {l:'72%',t:'58%',w:'11%',h:'9%', delay:'.7s'},
+    {l:'48%',t:'40%',w:'9%',h:'7%', delay:'3.3s'},
+  ];
+  FLOATER_SPOTS.forEach(f=>{
+    const d = document.createElement('div');
+    d.className='floater';
+    d.style.left=f.l; d.style.top=f.t;
+    d.dataset.w = parseFloat(f.w); d.dataset.h = parseFloat(f.h);
+    d.style.width=f.w; d.style.height=f.h;
+    d.style.animationDelay=f.delay;
+    ovFloaters.appendChild(d);
+  });
+
+  function makeChip(c, container){
+    const chip = document.createElement('div');
+    chip.className='chip'+(c===currentCond?' active':'');
+    chip.innerHTML = `<span class="t">${c.name}</span><span class="a mono">${c.acuity}</span>`;
+    chip.addEventListener('click', ()=>{
+      currentCond = c;
+      [...chipsEl.children, ...chips2El.children].forEach(ch=>ch.classList.remove('active'));
+      chip.classList.add('active');
+      buildSubChips();
+      buildStageRow();
+      render();
+    });
+    container.appendChild(chip);
+  }
+  AGING.forEach(c=>makeChip(c, chipsEl));
+  GENERAL.forEach(c=>makeChip(c, chips2El));
+
+  function buildSubChips(){
+    subChipsEl.innerHTML='';
+    if(currentCond.sub){
+      subChipsEl.classList.add('show');
+      currentCond.sub.forEach(s=>{
+        const b = document.createElement('button');
+        b.className='subchip'+(s===currentSub?' active':'');
+        b.textContent = currentCond.subLabel[s];
+        b.addEventListener('click', ()=>{
+          currentSub = s;
+          [...subChipsEl.children].forEach(x=>x.classList.remove('active'));
+          b.classList.add('active');
+          render();
+        });
+        subChipsEl.appendChild(b);
+      });
+    } else {
+      subChipsEl.classList.remove('show');
+    }
+  }
+  buildSubChips();
+
+  function buildStageRow(){
+    if(currentCond.group==='aging'){
+      stageRow.classList.add('show');
+    } else {
+      stageRow.classList.remove('show');
+    }
+  }
+  buildStageRow();
+  [...stageRow.children].forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const stage = +btn.dataset.stage;
+      severity = stage===1?22 : stage===2?58 : 92;
+      sevInput.value = severity;
+      [...stageRow.children].forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+  });
+
+  function sevText(v){ if(v<34) return '초기'; if(v<67) return '중기'; return '말기'; }
+  sevInput.addEventListener('input', e=>{
+    severity = +e.target.value;
+    [...stageRow.children].forEach(b=>b.classList.remove('active'));
+    render();
+  });
+
+  function render(){
+    condLabel.textContent = currentCond.sub ? `${currentCond.name} · ${currentCond.subLabel[currentSub]}` : currentCond.name;
+    acuityBadge.textContent = currentCond.acuity;
+    sevLabel.textContent = currentCond.group==='aging' ? `체험 강도 · ${sevText(severity)}` : '체험 강도';
+    sevValue.textContent = severity+'%';
+
+    const t = severity/100;
+    const res = currentCond.apply(t, currentSub) || {};
+
+    videoSim.style.filter = res.filter || 'none';
+
+    // vignette / tunnel
+    const vig = res.vignette||0;
+    ovVignette.style.opacity = vig>0 ? 1 : 0;
+    if(vig>0){
+      const inner = res.vignetteSoft ? (50 - vig*46) : (46 - vig*40);
+      const softness = res.vignetteSoft ? 22 : 10;
+      ovVignette.style.background = `radial-gradient(circle at 50% 50%, transparent ${Math.max(2,inner*0.4)}%, rgba(0,0,0,${0.65+vig*0.32}) ${inner+softness}%)`;
+    }
+
+    // hemianopia half-field
+    const hemi = res.hemi||0;
+    ovHemi.style.opacity = hemi>0 ? Math.min(1, 0.35+hemi*0.75) : 0;
+    ovHemi.style.left = 0; ovHemi.style.right='auto';
+    ovHemi.style.width = hemi>0 ? '50%' : '0';
+
+    // central scotoma
+    const central = res.central||0;
+    ovCentral.style.opacity = central>0 ? Math.min(0.96, 0.22+central*0.72) : 0;
+    ovCentral.style.width = (28+central*28)+'%';
+    ovCentral.style.height = (28+central*28)+'%';
+    ovCentral.style.filter = res.centralHard ? 'blur(2px)' : 'blur(0px)';
+
+    // haze
+    const haze = res.haze||0;
+    ovHaze.style.opacity = haze>0 ? Math.min(1, 0.26+haze*0.72) : 0;
+    ovHaze.style.backdropFilter = `blur(${4+haze*14}px)`;
+    ovHaze.style.webkitBackdropFilter = ovHaze.style.backdropFilter;
+
+    // glare
+    const glare = res.glare||0;
+    ovGlare.style.opacity = glare>0 ? Math.min(0.85, glare*0.9) : 0;
+
+    // ghost (diplopia)
+    const ghost = res.ghost||0;
+    if(ghost>0){
+      videoGhost.style.opacity = Math.min(0.65, 0.15+ghost*0.6);
+      videoGhost.style.transform = `translate(${4+ghost*22}px, ${2+ghost*8}px)`;
+    } else {
+      videoGhost.style.opacity = 0;
+    }
+
+    // colorblind (SVG matrix via filter)
+    if(res.colorblind){
+      const m = CB_MATRIX[res.colorblind];
+      const id = 'cbmat';
+      let svg = document.getElementById('cb-svg');
+      if(!svg){
+        svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        svg.id='cb-svg'; svg.setAttribute('width','0'); svg.setAttribute('height','0');
+        svg.style.position='absolute';
+        svg.innerHTML = `<filter id="${id}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${m}"/></filter>`;
+        document.body.appendChild(svg);
+      } else {
+        svg.querySelector('feColorMatrix').setAttribute('values', m);
+      }
+      const mixT = res.colorblindT!=null? res.colorblindT : 1;
+      videoSim.style.filter = (videoSim.style.filter==='none'?'':videoSim.style.filter+' ') + `url(#${id})`;
+      videoSim.style.opacity = 1;
+    }
+
+    // floaters
+    [...ovFloaters.children].forEach((el)=>{
+      const f = res.floaters||0;
+      el.style.opacity = f>0 ? Math.min(0.94, f*0.95) : 0;
+      const baseW = +el.dataset.w, baseH = +el.dataset.h;
+      el.style.width = (baseW*(1+f*1.7))+'%';
+      el.style.height = (baseH*(1+f*1.7))+'%';
+    });
+
+    tipsDesc.textContent = currentCond.desc;
+    tipsList.innerHTML = currentCond.tips.map(x=>`<li>${x}</li>`).join('');
+  }
+
+  tipsToggle.addEventListener('click', ()=>{
+    const open = tipsBody.classList.toggle('open');
+    tipsToggle.classList.toggle('open', open);
+  });
+
+  const stage = document.getElementById('stage');
+  const divider = document.getElementById('divider');
+  const simWrap = document.getElementById('simWrap');
+  let dragging = false;
+  function setSplit(px){
+    const rect = stage.getBoundingClientRect();
+    let x = Math.max(rect.width*0.08, Math.min(rect.width*0.92, px));
+    const pct = (x/rect.width)*100;
+    divider.style.left = x+'px';
+    simWrap.style.clipPath = `polygon(${pct}% 0, 100% 0, 100% 100%, ${pct}% 100%)`;
+  }
+  setSplit((stage.getBoundingClientRect().width||360)/2);
+  function pointerDown(){ dragging = true; }
+  function pointerMove(e){
+    if(!dragging) return;
+    const rect = stage.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    setSplit(clientX - rect.left);
+  }
+  function pointerUp(){ dragging = false; }
+  divider.addEventListener('pointerdown', pointerDown);
+  window.addEventListener('pointermove', pointerMove);
+  window.addEventListener('pointerup', pointerUp);
+  window.addEventListener('resize', ()=> setSplit((stage.getBoundingClientRect().width)/2));
+
+  const permOverlay = document.getElementById('permOverlay');
+  const btnStart = document.getElementById('btnStart');
+  const permErr = document.getElementById('permErr');
+  async function startCamera(){
+    permErr.textContent='';
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      permErr.textContent = '이 브라우저는 카메라 접근을 지원하지 않아요. https 환경에서 열어주세요.';
+      return;
+    }
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video:{ facingMode:{ ideal:'environment' }, width:{ideal:1280}, height:{ideal:720} }, audio:false
+      });
+      videoNormal.srcObject = stream;
+      videoSim.srcObject = stream;
+      videoGhost.srcObject = stream;
+      permOverlay.style.display='none';
+      render();
+    }catch(err){
+      permErr.textContent = '카메라 접근이 거부되었어요. 브라우저 설정에서 카메라 권한을 허용한 뒤 다시 시도해주세요.';
+    }
+  }
+  btnStart.addEventListener('click', startCamera);
+
+  render();
+})();
+</script>
+</body>
+</html>

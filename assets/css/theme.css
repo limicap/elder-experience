@@ -1,0 +1,25 @@
+:root{
+  --bg-deep:#14181C;
+  --bg-panel:#1B2026;
+  --bg-panel-2:#242B32;
+  --ink:#EEEAE2;
+  --ink-dim:#94A0AA;
+  --ink-faint:#5B646D;
+  --amber:#D9A441;
+  --amber-dim:#8A6C33;
+  --brick:#B0574A;
+  --sage:#7A9471;
+  --line:#333B43;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0; padding:0; width:100%; height:100%;
+  background:var(--bg-deep); color:var(--ink);
+  font-family:'Noto Sans KR',sans-serif;
+  overscroll-behavior:none;
+}
+.mono{ font-family:'JetBrains Mono',monospace; }
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;}

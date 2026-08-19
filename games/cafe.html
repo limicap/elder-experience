@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14181C">
+<title>카페 주문하기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/theme.css">
+<style>
+  html,body{ overflow-y:auto; }
+  #app{ min-height:100%; padding-top:var(--safe-top); padding-bottom:calc(20px + var(--safe-bottom)); }
+  #topbar{ display:flex; align-items:center; gap:10px; padding:14px 16px 4px; }
+  #homeBtn{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+  #topbar h1{ font-size:16px; margin:0; }
+  .wrap{ padding:14px 16px; }
+  .card{ background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; }
+  .eyebrow{ font-size:10.5px; color:var(--amber); font-weight:700; letter-spacing:.06em; margin-bottom:4px; }
+  .order{ font-size:15px; font-weight:700; line-height:1.6; margin-bottom:4px; }
+  .timerbar{ height:6px; border-radius:3px; background:var(--bg-panel-2); overflow:hidden; margin:10px 0 4px; }
+  .timerfill{ height:100%; background:var(--amber); width:100%; transition:width .1s linear; }
+
+  .menuGrid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px; }
+  .menuItem{ padding:9px 8px; border-radius:9px; border:1.5px solid var(--line); background:var(--bg-panel-2); font-size:11.5px; font-weight:700; line-height:1.4; color:var(--ink-dim); text-align:left; }
+  .menuItem b{ display:block; font-size:12.5px; color:var(--ink); margin-bottom:1px; }
+  .menuItem.correct{ border-color:#5E9E6E; background:rgba(94,158,110,.16); color:#5E9E6E; }
+  .menuItem.correct b{ color:#5E9E6E; }
+  .menuItem.wrong{ border-color:#C1594F; background:rgba(193,89,79,.16); }
+
+  .feedback{ margin-top:10px; font-size:13.5px; font-weight:700; min-height:20px; text-align:center; }
+  .feedback.ok{ color:#5E9E6E; } .feedback.ng{ color:#C1594F; }
+  .statusRow{ display:flex; justify-content:space-between; margin-top:6px; font-size:12.5px; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; }
+  .ghostbtn{ background:var(--bg-panel-2); color:var(--ink-dim); border:1px solid var(--line); font-weight:700; font-size:13px; padding:10px 18px; border-radius:22px; width:100%; margin-top:10px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar"><a id="homeBtn" href="../games.html">&#8592;</a><h1>카페 주문하기</h1></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="eyebrow">직원이 이렇게 물어봤어요</div>
+      <div class="order" id="orderText"></div>
+      <div class="timerbar"><div class="timerfill" id="timerFill"></div></div>
+      <div style="font-size:11px;color:var(--ink-faint);">키오스크 메뉴가 작고 복잡해요. 시간 안에 정확한 메뉴를 골라보세요.</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">메뉴판</div>
+      <div class="menuGrid" id="menuGrid"></div>
+      <div class="statusRow"><span>맞힌 개수 <b id="okCount">0</b> / <b id="total">0</b></span></div>
+      <div class="feedback" id="feedback"></div>
+      <button class="ghostbtn" id="btnRetry" style="display:none;">처음부터 다시</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const MENU = [
+  {name:'아메리카노', size:'Small', price:'2,500원'},
+  {name:'아메리카노', size:'Large', price:'3,000원'},
+  {name:'카페라떼', size:'Small', price:'3,500원'},
+  {name:'카페라떼', size:'Large', price:'4,000원'},
+  {name:'카푸치노', size:'Small', price:'3,800원'},
+  {name:'바닐라라떼', size:'Large', price:'4,500원'},
+  {name:'자몽에이드', size:'Small', price:'4,000원'},
+  {name:'복숭아아이스티', size:'Large', price:'4,300원'},
+];
+const ORDERS = [
+  {name:'아메리카노', size:'Large', text:'"아메리카노 큰 사이즈로 한 잔 드릴까요?"'},
+  {name:'카페라떼', size:'Small', text:'"카페라떼 작은 사이즈 맞으실까요?"'},
+  {name:'바닐라라떼', size:'Large', text:'"바닐라라떼 큰 걸로 준비해드릴게요, 맞으시죠?"'},
+  {name:'자몽에이드', size:'Small', text:'"자몽에이드 작은 사이즈 주문하신 거 맞나요?"'},
+  {name:'복숭아아이스티', size:'Large', text:'"복숭아아이스티 큰 사이즈 준비해드릴까요?"'},
+];
+function shuffle(a){ return a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]); }
+const order = shuffle(ORDERS);
+
+let idx=0, ok=0, answered=false, timerId=null, timeLeft=0;
+const orderText = document.getElementById('orderText');
+const menuGrid = document.getElementById('menuGrid');
+const feedback = document.getElementById('feedback');
+const timerFill = document.getElementById('timerFill');
+document.getElementById('total').textContent = order.length;
+
+function buildMenu(){
+  menuGrid.innerHTML='';
+  shuffle(MENU).forEach(m=>{
+    const b = document.createElement('button');
+    b.className='menuItem';
+    b.innerHTML = `<b>${m.name}</b>${m.size} · ${m.price}`;
+    b.addEventListener('click', ()=> select(m,b));
+    menuGrid.appendChild(b);
+  });
+}
+function startTimer(){
+  clearInterval(timerId);
+  timeLeft = 6000;
+  timerFill.style.width='100%';
+  timerId = setInterval(()=>{
+    timeLeft -= 100;
+    timerFill.style.width = Math.max(0,(timeLeft/6000*100))+'%';
+    if(timeLeft<=0){ clearInterval(timerId); if(!answered) select(null,null); }
+  }, 100);
+}
+function nextMission(){
+  if(idx>=order.length){
+    orderText.textContent = `완료! ${ok} / ${order.length} 번 정확히 주문받으셨어요.`;
+    feedback.textContent = '어르신은 작은 글씨 메뉴판과 빠른 응대에 당황하기 쉽습니다. 천천히, 크게 말하고 시간을 충분히 드려주세요.';
+    feedback.className='feedback ok';
+    document.getElementById('btnRetry').style.display='block';
+    timerFill.style.width='0%';
+    return;
+  }
+  answered=false;
+  feedback.textContent=''; feedback.className='feedback';
+  orderText.textContent = order[idx].text;
+  buildMenu();
+  startTimer();
+}
+function select(m, btn){
+  if(answered) return;
+  answered=true; clearInterval(timerId);
+  const correct = m && m.name===order[idx].name && m.size===order[idx].size;
+  [...menuGrid.children].forEach(c=>{
+    const txt = c.querySelector('b').textContent;
+    if(txt===order[idx].name && c.textContent.includes(order[idx].size)) c.classList.add('correct');
+  });
+  if(btn && !correct) btn.classList.add('wrong');
+  if(correct){ ok++; feedback.textContent='정확히 주문받으셨어요!'; feedback.className='feedback ok'; }
+  else if(!m){ feedback.textContent='시간 초과! 너무 오래 고민하면 뒷사람이 기다리게 돼요.'; feedback.className='feedback ng'; }
+  else { feedback.textContent=`다른 메뉴를 고르셨어요. 정답은 "${order[idx].name} ${order[idx].size}" 였어요.`; feedback.className='feedback ng'; }
+  document.getElementById('okCount').textContent = ok;
+  setTimeout(()=>{ idx++; nextMission(); }, 1400);
+}
+document.getElementById('btnRetry').addEventListener('click', ()=>{
+  idx=0; ok=0; document.getElementById('okCount').textContent='0';
+  document.getElementById('btnRetry').style.display='none';
+  nextMission();
+});
+nextMission();
+})();
+</script>
+</body>
+</html>

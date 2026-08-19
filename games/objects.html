@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14181C">
+<title>집안 물건 찾기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/theme.css">
+<style>
+  html,body{ overflow-y:auto; }
+  #app{ min-height:100%; padding-top:var(--safe-top); padding-bottom:calc(20px + var(--safe-bottom)); }
+  #topbar{ display:flex; align-items:center; gap:10px; padding:14px 16px 4px; }
+  #homeBtn{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+  #topbar h1{ font-size:16px; margin:0; }
+  .wrap{ padding:14px 16px; }
+  .card{ background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; }
+  .eyebrow{ font-size:10.5px; color:var(--amber); font-weight:700; letter-spacing:.06em; margin-bottom:4px; }
+  .mission{ font-size:15.5px; font-weight:700; margin-bottom:2px; }
+  .imgwrap{ position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--line); }
+  .imgwrap img{ width:100%; display:block; }
+  .marker{ position:absolute; width:30px; height:30px; margin-left:-15px; margin-top:-15px; border-radius:50%; }
+  .statusRow{ display:flex; justify-content:space-between; margin-top:10px; font-size:12.5px; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; }
+  .feedback{ margin-top:10px; font-size:13.5px; font-weight:700; min-height:20px; text-align:center; }
+  .feedback.ok{ color:#5E9E6E; } .feedback.ng{ color:#C1594F; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar"><a id="homeBtn" href="../games.html">&#8592;</a><h1>집안 물건 찾기</h1></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="eyebrow">미션</div>
+      <div class="mission" id="missionText">안경이 어디 있는지 짚어주세요</div>
+      <div class="imgwrap" id="imgwrap">
+        <img src="../assets/img/household_items.jpg" alt="거실 사진">
+      </div>
+      <div class="statusRow"><span>맞힌 개수 <b id="okCount">0</b> / <b id="total">0</b></span></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+// approx % coords on the extracted 900x900 living-room photo
+const SPOTS = [
+  {name:'안경', x:23, y:59, tol:12},
+  {name:'전화기', x:32, y:43, tol:10},
+  {name:'지팡이', x:43, y:48, tol:10},
+  {name:'리모컨', x:12, y:66, tol:10},
+  {name:'시계', x:94, y:54, tol:10},
+  {name:'텔레비전', x:6, y:63, tol:12},
+];
+const MISSIONS = SPOTS.map(s=>({ ask:s.name, text:`${s.name}이(가) 어디 있는지 짚어주세요` }));
+function shuffle(a){ return a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]); }
+const order = shuffle(MISSIONS);
+
+let idx=0, ok=0, answered=false;
+const missionText = document.getElementById('missionText');
+const imgwrap = document.getElementById('imgwrap');
+const feedback = document.getElementById('feedback');
+document.getElementById('total').textContent = order.length;
+
+function nextMission(){
+  if(idx>=order.length){
+    missionText.textContent = `완료! ${ok} / ${order.length} 개를 찾으셨어요.`;
+    feedback.textContent = '시력이 낮은 어르신께는 물건 이름과 함께 "TV 옆 서랍장 위"처럼 위치를 구체적으로 말해주는 게 큰 도움이 됩니다.';
+    feedback.className='feedback ok';
+    return;
+  }
+  answered=false;
+  feedback.textContent=''; feedback.className='feedback';
+  missionText.textContent = order[idx].text;
+}
+imgwrap.addEventListener('click', (e)=>{
+  if(answered || idx>=order.length) return;
+  const rect = imgwrap.getBoundingClientRect();
+  const xPct = (e.clientX-rect.left)/rect.width*100;
+  const yPct = (e.clientY-rect.top)/rect.height*100;
+
+  const target = SPOTS.find(s=>s.name===order[idx].ask);
+  const d = Math.hypot(target.x-xPct, target.y-yPct);
+  const correct = d <= target.tol;
+
+  answered=true;
+  const m = document.createElement('div');
+  m.className='marker';
+  m.style.left=xPct+'%'; m.style.top=yPct+'%';
+  m.style.background = correct ? 'rgba(94,158,110,.65)' : 'rgba(193,89,79,.65)';
+  m.style.border = '2px solid white';
+  imgwrap.appendChild(m);
+
+  if(correct){ ok++; feedback.textContent='정답이에요! 잘 찾으셨어요.'; feedback.className='feedback ok'; }
+  else { feedback.textContent=`아쉬워요. "${order[idx].ask}"은(는) 다른 곳에 있었어요.`; feedback.className='feedback ng'; }
+  document.getElementById('okCount').textContent = ok;
+
+  setTimeout(()=>{ m.remove(); idx++; nextMission(); }, 1200);
+});
+nextMission();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14181C">
+<title>청각 체험 · 노인성 난청 체험</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/theme.css">
+<style>
+  html,body{ overflow-y:auto; }
+  #app{ min-height:100%; display:flex; flex-direction:column; padding-top:var(--safe-top); padding-bottom:calc(20px + var(--safe-bottom)); }
+  #topbar{ display:flex; align-items:center; gap:10px; padding:14px 16px 6px; }
+  #homeBtn{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+  #topbar h1{ font-size:17px; margin:0; flex:1; }
+
+  #modeTabs{ display:flex; gap:8px; padding:6px 16px 14px; }
+  .modetab{ flex:1; padding:11px 6px; border-radius:12px; border:1.5px solid var(--line); background:var(--bg-panel); color:var(--ink-dim); font-weight:700; font-size:13.5px; text-align:center; }
+  .modetab.on{ border-color:var(--sage); background:rgba(122,148,113,.14); color:var(--sage); }
+
+  .panel{ display:none; padding:0 16px; }
+  .panel.on{ display:block; }
+
+  .lvcards{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px; }
+  .lvc{ border-radius:12px; padding:10px 6px; text-align:center; border:1.5px solid var(--line); background:var(--bg-panel); }
+  .lvc .ic{ font-size:18px; }
+  .lvc .nm{ font-size:11.5px; font-weight:700; margin-top:3px; }
+  .lvc .ds{ font-size:9.5px; color:var(--ink-faint); margin-top:2px; line-height:1.4; }
+
+  .card{ background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:14px; }
+  .eyebrow{ font-size:10.5px; color:var(--amber); font-weight:700; letter-spacing:.06em; margin-bottom:4px; }
+  .card h2{ font-size:16px; margin:0 0 4px; }
+  .card p.sub{ font-size:12.5px; color:var(--ink-dim); margin:0 0 12px; }
+
+  .waveWrap{ height:44px; display:flex; align-items:flex-end; justify-content:center; gap:3px; margin-bottom:12px; }
+  .waveWrap .b{ width:5px; border-radius:2px; height:4px; background:var(--amber); opacity:.85; transition:height .08s; }
+
+  #levelGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-bottom:8px; }
+  .levelchip{ padding:10px 3px; border-radius:12px; border:1.5px solid var(--line); background:var(--bg-panel-2); text-align:center; font-size:11.5px; font-weight:700; color:var(--ink-dim); }
+  .levelchip.active{ border-color:var(--amber); background:rgba(217,164,65,.14); color:var(--amber); }
+
+  .bigBtn{ background:var(--amber); color:#1B1300; border:none; font-weight:700; font-size:14.5px; padding:12px 20px; border-radius:26px; width:100%; margin-top:6px; }
+  .bigBtn:disabled{ opacity:.35; }
+  .ghostBtn{ background:var(--bg-panel-2); color:var(--ink-dim); border:1px solid var(--line); font-weight:700; font-size:13px; padding:10px 18px; border-radius:22px; width:100%; }
+
+  .quizOpt{ display:block; width:100%; text-align:left; padding:13px 14px; border-radius:12px; border:1.5px solid var(--line); background:var(--bg-panel-2); color:var(--ink); font-size:13.5px; font-weight:600; margin-bottom:8px; }
+  .quizOpt.correct{ border-color:#5E9E6E; background:rgba(94,158,110,.16); color:#5E9E6E; }
+  .quizOpt.wrong{ border-color:#C1594F; background:rgba(193,89,79,.16); color:#C1594F; }
+  #feedbackBox{ font-size:13px; font-weight:700; min-height:20px; }
+  #feedbackBox.good{ color:#5E9E6E; } #feedbackBox.bad{ color:#C1594F; }
+  .scoreCircle{ width:96px; height:96px; border-radius:50%; border:5px solid var(--amber); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; color:var(--amber); font-family:'JetBrains Mono',monospace; margin:8px auto; }
+
+  /* compare mode */
+  .subtabs{ display:flex; gap:8px; margin-bottom:12px; }
+  .subtab{ flex:1; padding:9px 4px; border-radius:10px; border:1.5px solid var(--line); background:var(--bg-panel); color:var(--ink-dim); font-weight:700; font-size:13px; text-align:center; }
+  .subtab.on{ border-color:var(--amber); background:rgba(217,164,65,.14); color:var(--amber); }
+  .sitrow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:12px; }
+  .sitbtn{ padding:8px 3px; border-radius:9px; border:1.5px solid var(--line); background:var(--bg-panel-2); color:var(--ink-dim); font-size:10.5px; font-weight:700; text-align:center; }
+  .sitbtn.on{ border-color:var(--sage); color:var(--sage); background:rgba(122,148,113,.14); }
+  .lvrow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+  .lvbtn{ padding:10px 4px; border-radius:10px; border:1.5px solid; text-align:center; font-size:12px; font-weight:700; }
+  .lvbtn.l1{ border-color:#5E9E6E; color:#5E9E6E; background:rgba(94,158,110,.1); }
+  .lvbtn.l2{ border-color:var(--amber); color:var(--amber); background:rgba(217,164,65,.1); }
+  .lvbtn.l3{ border-color:var(--brick); color:var(--brick); background:rgba(176,87,74,.12); }
+  .scriptbox{ background:var(--bg-panel-2); border-left:3px solid var(--sage); border-radius:8px; padding:12px 14px; font-size:13.5px; line-height:1.8; margin-bottom:10px; }
+  .scriptbox.hidden{ border-left-color:var(--ink-faint); color:var(--ink-dim); font-size:12.5px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <a id="homeBtn" href="index.html">&#8592;</a>
+    <h1>청각 체험</h1>
+  </div>
+
+  <div id="modeTabs">
+    <button class="modetab on" data-mode="quiz">&#127911; 퀴즈로 체험</button>
+    <button class="modetab" data-mode="compare">&#128266; 비교해서 듣기</button>
+  </div>
+
+  <!-- ===== MODE 1: 퀴즈 체험 ===== -->
+  <div class="panel on" id="panel-quiz">
+
+    <div class="lvcards">
+      <div class="lvc"><div class="ic">&#9989;</div><div class="nm">정상</div><div class="ds">또렷하게 들림</div></div>
+      <div class="lvc"><div class="ic">&#128066;</div><div class="nm">경도~중등도</div><div class="ds">고음 자음 손실</div></div>
+      <div class="lvc"><div class="ic">&#127786;</div><div class="nm">고도</div><div class="ds">말소리 구별 어려움</div></div>
+    </div>
+
+    <div class="card" id="qMain">
+      <div class="eyebrow">지금 들리는 소리</div>
+      <h2 id="qCaption">"오후 2시에 2층 프로그램실에서 건강체조를 합니다."</h2>
+      <div class="waveWrap" id="qWave"></div>
+      <button class="ghostBtn" id="qReplay">&#128257; 다시 재생</button>
+      <button class="bigBtn" id="qToQuiz">내용 확인 퀴즈로 &rarr;</button>
+    </div>
+
+    <div id="levelGrid"></div>
+    <div style="text-align:center;font-size:10px;color:var(--ink-faint);margin-bottom:16px;">단계를 눌러 같은 문장이 어떻게 달라지는지 비교해보세요 &middot; 이어폰 착용 시 효과적</div>
+
+    <div class="card" id="qIntro" style="display:none;">
+      <div class="eyebrow">중등도 난청 · 병원 대기 안내</div>
+      <h2>이번엔 병원 진료실 안내방송을 들어보세요</h2>
+      <p class="sub">중등도 난청 상태로 들려드립니다. 문장은 보여드리지 않아요.</p>
+      <button class="bigBtn" id="qPlayHospital">&#9654; 방송 듣기</button>
+      <button class="ghostBtn" style="margin-top:8px;" id="qToQuizReal">내용 확인 퀴즈로 &rarr;</button>
+    </div>
+
+    <div class="card" id="qQuiz" style="display:none;">
+      <div class="eyebrow">내용 확인 퀴즈</div>
+      <h2>몇 번 진료실로 부르셨나요?</h2>
+      <div id="quizOpts"></div>
+      <div id="feedbackBox"></div>
+      <button class="bigBtn" id="qNext" disabled>결과 보기 &rarr;</button>
+    </div>
+
+    <div class="card" id="qSummary" style="display:none; text-align:center;">
+      <div class="eyebrow">체험 완료</div>
+      <h2>내용 확인 결과</h2>
+      <div class="scoreCircle" id="scoreCircle">0/1</div>
+      <p class="sub">난청 상태에서는 소리가 들려도 핵심 정보를 놓치기 쉽습니다.<br>천천히, 또박또박, 반복해서 안내하는 것이 중요합니다.</p>
+      <button class="ghostBtn" id="qRestart">처음부터 다시</button>
+    </div>
+  </div>
+
+  <!-- ===== MODE 2: 비교 청취 ===== -->
+  <div class="panel" id="panel-compare">
+    <div class="subtabs">
+      <button class="subtab on" data-sub="sw">&#128653; 지하철</button>
+      <button class="subtab" data-sub="ho">&#127973; 병원 접수</button>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow" id="cmpEyebrow">지하철 귀가 상황</div>
+      <p class="sub" id="cmpDesc">안내방송을 고르고 정상&middot;경증&middot;중증으로 비교 체험하세요.</p>
+      <div class="sitrow" id="sitRow"></div>
+      <div class="lvrow" id="lvRow">
+        <div class="lvbtn l1" data-lv="n">&#9989;<br>정상</div>
+        <div class="lvbtn l2" data-lv="m">&#128066;<br>경증</div>
+        <div class="lvbtn l3" data-lv="s">&#127786;<br>중증</div>
+      </div>
+      <div class="scriptbox" id="scriptBox">역 이름과 환승 정보를 알려주는 안내방송입니다.</div>
+      <div class="waveWrap" id="cmpWave"></div>
+      <button class="bigBtn" id="cmpPlay">&#9654; 재생하기</button>
+    </div>
+  </div>
+
+</div>
+
+<audio id="playerQ" preload="auto"></audio>
+<audio id="playerQ2" preload="auto"></audio>
+<audio id="playerCmp" preload="auto"></audio>
+
+<script>
+(function(){
+"use strict";
+
+// ---------- mode switch ----------
+document.querySelectorAll('.modetab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.modetab').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    const m = btn.dataset.mode;
+    document.getElementById('panel-quiz').classList.toggle('on', m==='quiz');
+    document.getElementById('panel-compare').classList.toggle('on', m==='compare');
+  });
+});
+
+// ================= MODE 1: QUIZ =================
+(function(){
+  const LEVELS = [
+    { id:'normal', name:'정상', caption:'"오후 2시에 2층 프로그램실에서 건강체조를 합니다."',
+      preGainDb:2, highpass:20, lowpass:20000, k:0, gate:null },
+    { id:'mild', name:'경도', caption:'"오후 2시에 2층 프로그램○에서 건강체조를 합○다."',
+      preGainDb:-8, highpass:200, lowpass:2600, k:5, gate:{ floor:0.12, dipMs:180, gapMin:900, gapMax:1300 } },
+    { id:'moderate', name:'중등도', caption:'"오후 2시…에… 프로그램실에서… 건강체조를 합니다."',
+      preGainDb:-15, highpass:380, lowpass:1400, k:12, gate:{ floor:0.04, dipMs:320, gapMin:450, gapMax:750 } },
+    { id:'severe', name:'고도', caption:'"웅—… 프로그램…—체조…다."',
+      preGainDb:-24, highpass:550, lowpass:650, k:20, gate:{ floor:0.02, dipMs:520, gapMin:150, gapMax:350 } },
+  ];
+  let currentLevel = LEVELS[0];
+  const player = document.getElementById('playerQ');
+  const player2 = document.getElementById('playerQ2');
+  const levelGrid = document.getElementById('levelGrid');
+  const qCaption = document.getElementById('qCaption');
+  const waveWrap = document.getElementById('qWave');
+  for(let i=0;i<28;i++){ const b=document.createElement('div'); b.className='b'; waveWrap.appendChild(b); }
+
+  LEVELS.forEach((lv,i)=>{
+    const chip = document.createElement('div');
+    chip.className='levelchip'+(i===0?' active':'');
+    chip.textContent = lv.name;
+    chip.addEventListener('click', ()=>{
+      currentLevel = lv;
+      [...levelGrid.children].forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      qCaption.textContent = lv.caption;
+      applyParams();
+      restartGate();
+    });
+    levelGrid.appendChild(chip);
+  });
+  document.getElementById('qReplay').addEventListener('click', ()=>{ player.currentTime=0; player.play().catch(()=>{}); });
+
+  // quiz flow
+  const QUIZ = { options:['1번 진료실','3번 진료실','5번 진료실'], answer:1 };
+  let score=0, answered=false;
+  const qMain=document.getElementById('qMain'), qIntro=document.getElementById('qIntro'),
+        qQuiz=document.getElementById('qQuiz'), qSummary=document.getElementById('qSummary');
+  const quizOpts=document.getElementById('quizOpts'), feedbackBox=document.getElementById('feedbackBox'),
+        qNext=document.getElementById('qNext'), scoreCircle=document.getElementById('scoreCircle');
+  const levelGridWrap = levelGrid;
+
+  document.getElementById('qToQuiz').addEventListener('click', ()=>{
+    player.pause(); if(gateTimer) clearTimeout(gateTimer);
+    qMain.style.display='none'; qIntro.style.display='block'; levelGridWrap.style.display='none';
+  });
+  document.getElementById('qPlayHospital').addEventListener('click', ()=>{ player2.currentTime=0; player2.play().catch(()=>{}); });
+  document.getElementById('qToQuizReal').addEventListener('click', ()=>{
+    qIntro.style.display='none'; qQuiz.style.display='block'; renderQuiz();
+  });
+  function renderQuiz(){
+    quizOpts.innerHTML=''; answered=false; qNext.disabled=true; feedbackBox.textContent=''; feedbackBox.className='';
+    QUIZ.options.forEach((opt,i)=>{
+      const b=document.createElement('button'); b.className='quizOpt'; b.textContent=opt;
+      b.addEventListener('click', ()=>selectAnswer(i));
+      quizOpts.appendChild(b);
+    });
+  }
+  function selectAnswer(i){
+    if(answered) return; answered=true;
+    const correct = i===QUIZ.answer;
+    if(correct) score++;
+    [...quizOpts.children].forEach((b,idx)=>{
+      b.disabled=true;
+      if(idx===QUIZ.answer) b.classList.add('correct');
+      else if(idx===i) b.classList.add('wrong');
+    });
+    feedbackBox.textContent = correct? '정답입니다!' : `아쉬워요. 정답은 "${QUIZ.options[QUIZ.answer]}" 였어요.`;
+    feedbackBox.className = correct?'good':'bad';
+    qNext.disabled=false;
+  }
+  qNext.addEventListener('click', ()=>{
+    player2.pause(); qQuiz.style.display='none'; qSummary.style.display='block';
+    scoreCircle.textContent = `${score}/1`;
+  });
+  document.getElementById('qRestart').addEventListener('click', ()=>{
+    score=0; qSummary.style.display='none'; qIntro.style.display='none';
+    qMain.style.display='block'; levelGridWrap.style.display='grid';
+    player2.pause(); currentLevel=LEVELS[0];
+    [...levelGrid.children].forEach((c,i)=>c.classList.toggle('active', i===0));
+    qCaption.textContent = LEVELS[0].caption;
+    applyParams();
+    player.currentTime=0; player.play().catch(()=>{});
+  });
+
+  // WebAudio chain
+  let audioCtx, preGain, hp, lp, shaper, gateGain, started=false, gateTimer=null;
+  let analyser, dataArr;
+  function dbToLin(db){ return Math.pow(10, db/20); }
+  function makeCurve(k){ const n=1024,c=new Float32Array(n); for(let i=0;i<n;i++){ const x=(i*2)/n-1; c[i]= k<=0? x : (1+k)*x/(1+k*Math.abs(x)); } return c; }
+  function gateLoop(){
+    if(!audioCtx) return;
+    const g = currentLevel.gate, now = audioCtx.currentTime;
+    if(!g){ gateGain.gain.cancelScheduledValues(now); gateGain.gain.setValueAtTime(1, now); gateTimer=setTimeout(gateLoop,500); return; }
+    gateGain.gain.cancelScheduledValues(now); gateGain.gain.setValueAtTime(1, now);
+    gateGain.gain.linearRampToValueAtTime(g.floor, now+0.025);
+    gateGain.gain.setValueAtTime(g.floor, now+0.025+g.dipMs/1000);
+    gateGain.gain.linearRampToValueAtTime(1, now+0.025+g.dipMs/1000+0.03);
+    gateTimer = setTimeout(gateLoop, g.dipMs + g.gapMin + Math.random()*(g.gapMax-g.gapMin));
+  }
+  function restartGate(){ if(gateTimer) clearTimeout(gateTimer); if(audioCtx){ gateGain.gain.cancelScheduledValues(audioCtx.currentTime); gateGain.gain.setValueAtTime(1, audioCtx.currentTime); } gateLoop(); }
+  function applyParams(){
+    if(!audioCtx) return;
+    const p = currentLevel, now = audioCtx.currentTime, tau=0.02;
+    preGain.gain.setTargetAtTime(dbToLin(p.preGainDb), now, tau);
+    hp.frequency.setTargetAtTime(p.highpass, now, tau);
+    lp.frequency.setTargetAtTime(p.lowpass, now, tau);
+    shaper.curve = makeCurve(p.k);
+  }
+  async function ensureAudio(){
+    if(started) return; started=true;
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const src = audioCtx.createMediaElementSource(player);
+    preGain = audioCtx.createGain();
+    hp = audioCtx.createBiquadFilter(); hp.type='highpass'; hp.Q.value=0.7; hp.frequency.value=20;
+    lp = audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=0.8; lp.frequency.value=20000;
+    shaper = audioCtx.createWaveShaper(); shaper.curve = makeCurve(0);
+    gateGain = audioCtx.createGain(); gateGain.gain.value=1;
+    src.connect(preGain); preGain.connect(hp); hp.connect(lp); lp.connect(shaper); shaper.connect(gateGain); gateGain.connect(audioCtx.destination);
+    analyser = audioCtx.createAnalyser(); analyser.fftSize=128; gateGain.connect(analyser);
+    dataArr = new Uint8Array(analyser.frequencyBinCount);
+
+    const src2 = audioCtx.createMediaElementSource(player2);
+    const mp = LEVELS[2];
+    const g2 = audioCtx.createGain(); g2.gain.value = dbToLin(mp.preGainDb);
+    const hp2 = audioCtx.createBiquadFilter(); hp2.type='highpass'; hp2.Q.value=0.7; hp2.frequency.value=mp.highpass;
+    const lp2 = audioCtx.createBiquadFilter(); lp2.type='lowpass'; lp2.Q.value=0.8; lp2.frequency.value=mp.lowpass;
+    const sh2 = audioCtx.createWaveShaper(); sh2.curve = makeCurve(mp.k);
+    src2.connect(g2); g2.connect(hp2); hp2.connect(lp2); lp2.connect(sh2); sh2.connect(audioCtx.destination);
+
+    player.src = 'assets/audio/quiz_subway.mp3';
+    player2.src = 'assets/audio/quiz_hospital.mp3';
+    applyParams();
+    restartGate();
+    drawLoop();
+  }
+  function drawLoop(){
+    requestAnimationFrame(drawLoop);
+    if(!analyser) return;
+    analyser.getByteFrequencyData(dataArr);
+    const bars = waveWrap.children;
+    for(let i=0;i<bars.length;i++){
+      const idx = Math.floor(i*(dataArr.length/bars.length));
+      const v = dataArr[idx]/255;
+      bars[i].style.height = Math.max(4, v*40)+'px';
+    }
+  }
+  document.getElementById('qToQuiz').addEventListener('click', ensureAudio, {once:false});
+  qMain.addEventListener('click', async ()=>{
+    await ensureAudio();
+    if(player.paused){ player.currentTime=0; player.play().catch(()=>{}); }
+  }, {once:true});
+})();
+
+// ================= MODE 2: COMPARE =================
+(function(){
+  const CONTENT = {
+    sw: [
+      { key:'sw0', label:'역 이름 안내', icon:'🚉', script:'이번 역은 시청, 시청역입니다. 내리실 문은 오른쪽입니다.' },
+      { key:'sw1', label:'환승 안내', icon:'🚪', script:'종로3가역에서 내리시면 5호선, 경의중앙선으로 환승하실 수 있습니다.' },
+      { key:'sw2', label:'안전 안내', icon:'⚠️', script:'스크린도어가 닫힙니다. 문에 기대거나 손을 끼우지 마세요.' },
+    ],
+    ho: [
+      { key:'ph0', label:'이름 호명', icon:'📋', script:'다음 분 오세요. 김정숙 님? 3번 진료실로 가시면 됩니다.' },
+      { key:'ph1', label:'복약 안내', icon:'💊', script:'이 약은 혈압약입니다. 하루 한 번, 아침 식후에 드세요.' },
+    ]
+  };
+  let curSub='sw', curKey='sw0', curLv='n';
+  const sitRow = document.getElementById('sitRow');
+  const scriptBox = document.getElementById('scriptBox');
+  const player = document.getElementById('playerCmp');
+  const wave = document.getElementById('cmpWave');
+  for(let i=0;i<24;i++){ const b=document.createElement('div'); b.className='b'; wave.appendChild(b); }
+
+  document.querySelectorAll('.subtab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('on'));
+      t.classList.add('on');
+      curSub = t.dataset.sub;
+      document.getElementById('cmpEyebrow').textContent = curSub==='sw' ? '지하철 귀가 상황' : '병원 접수창구 상황';
+      buildSitRow();
+    });
+  });
+  function buildSitRow(){
+    sitRow.innerHTML='';
+    CONTENT[curSub].forEach((c,i)=>{
+      const b = document.createElement('div');
+      b.className='sitbtn'+(i===0?' on':'');
+      b.innerHTML = `${c.icon}<br>${c.label}`;
+      b.addEventListener('click', ()=>{
+        [...sitRow.children].forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
+        curKey = c.key;
+        updateScript();
+      });
+      sitRow.appendChild(b);
+    });
+    curKey = CONTENT[curSub][0].key;
+    updateScript();
+  }
+  function updateScript(){
+    const item = CONTENT[curSub].find(c=>c.key===curKey);
+    if(curLv==='n'){ scriptBox.className='scriptbox'; scriptBox.textContent = item.script; }
+    else { scriptBox.className='scriptbox hidden'; scriptBox.textContent = curLv==='m' ? '（고주파 자음이 흐릿하게 들립니다）' : '（자음 대부분이 들리지 않아 알아듣기 어렵습니다）'; }
+  }
+  document.querySelectorAll('.lvbtn').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('.lvbtn').forEach(x=>x.style.opacity='.55');
+      b.style.opacity='1';
+      curLv = b.dataset.lv;
+      updateScript();
+    });
+  });
+  document.querySelectorAll('.lvbtn').forEach(b=>b.style.opacity = b.dataset.lv==='n'?'1':'.55');
+
+  let audioCtx, analyser, dataArr, src;
+  function drawLoop(){
+    requestAnimationFrame(drawLoop);
+    if(!analyser) return;
+    analyser.getByteFrequencyData(dataArr);
+    const bars = wave.children;
+    for(let i=0;i<bars.length;i++){
+      const idx = Math.floor(i*(dataArr.length/bars.length));
+      const v = dataArr[idx]/255;
+      bars[i].style.height = Math.max(4, v*40)+'px';
+    }
+  }
+  document.getElementById('cmpPlay').addEventListener('click', async ()=>{
+    player.src = `assets/audio/${curKey}_${curLv}.mp3`;
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      src = audioCtx.createMediaElementSource(player);
+      analyser = audioCtx.createAnalyser(); analyser.fftSize=128;
+      src.connect(analyser); analyser.connect(audioCtx.destination);
+      dataArr = new Uint8Array(analyser.frequencyBinCount);
+      drawLoop();
+    }
+    if(audioCtx.state==='suspended') await audioCtx.resume();
+    player.currentTime=0; player.play().catch(()=>{});
+  });
+
+  buildSitRow();
+})();
+
+})();
+</script>
+</body>
+</html>

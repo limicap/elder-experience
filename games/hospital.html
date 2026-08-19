@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14181C">
+<title>병원 길찾기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/theme.css">
+<style>
+  html,body{ overflow-y:auto; }
+  #app{ min-height:100%; padding-top:var(--safe-top); padding-bottom:calc(20px + var(--safe-bottom)); }
+  #topbar{ display:flex; align-items:center; gap:10px; padding:14px 16px 4px; }
+  #homeBtn{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+  #topbar h1{ font-size:16px; margin:0; }
+  .wrap{ padding:14px 16px; }
+  .card{ background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; }
+  .eyebrow{ font-size:10.5px; color:var(--amber); font-weight:700; letter-spacing:.06em; margin-bottom:4px; }
+  .mission{ font-size:15.5px; font-weight:700; margin-bottom:2px; }
+  .imgwrap{ position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--line); }
+  .imgwrap img{ width:100%; display:block; }
+  .marker{ position:absolute; width:30px; height:30px; margin-left:-15px; margin-top:-15px; border-radius:50%; }
+  .statusRow{ display:flex; justify-content:space-between; margin-top:10px; font-size:12.5px; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; }
+  .feedback{ margin-top:10px; font-size:13.5px; font-weight:700; min-height:20px; text-align:center; }
+  .feedback.ok{ color:#5E9E6E; } .feedback.ng{ color:#C1594F; }
+  .ghostbtn{ background:var(--bg-panel-2); color:var(--ink-dim); border:1px solid var(--line); font-weight:700; font-size:13px; padding:10px 18px; border-radius:22px; width:100%; margin-top:10px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar"><a id="homeBtn" href="../games.html">&#8592;</a><h1>병원 길찾기</h1></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="eyebrow">미션</div>
+      <div class="mission" id="missionText">약을 받으려면 어디로 가야 할까요?</div>
+      <div class="imgwrap" id="imgwrap">
+        <img src="../assets/img/hospital_map.jpg" alt="병원 안내도">
+      </div>
+      <div class="statusRow"><span>맞힌 개수 <b id="okCount">0</b> / <b id="total">0</b></span></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+// coordinates as % of image, based on the 900x900 extracted map
+const SPOTS = [
+  {name:'접수창구', x:10, y:11},
+  {name:'화장실', x:44, y:10},
+  {name:'채혈실', x:66, y:11},
+  {name:'진료실', x:88, y:12},
+  {name:'방사선과', x:66, y:33},
+  {name:'내과', x:88, y:33},
+  {name:'주사실', x:16, y:57},
+  {name:'엘리베이터', x:88, y:57},
+  {name:'안과', x:16, y:78},
+  {name:'정형외과', x:49, y:78},
+  {name:'약국', x:84, y:78},
+];
+const MISSIONS = [
+  {ask:'약국', text:'약을 받으려면 어디로 가야 할까요?'},
+  {ask:'채혈실', text:'피 검사를 하려면 어디로 가야 할까요?'},
+  {ask:'접수창구', text:'처음 오셨다면 가장 먼저 어디로 가야 할까요?'},
+  {ask:'안과', text:'눈이 침침해서 진료를 받으려면 어디로 가야 할까요?'},
+  {ask:'주사실', text:'주사를 맞으려면 어디로 가야 할까요?'},
+  {ask:'정형외과', text:'무릎이 아파 진료를 받으려면 어디로 가야 할까요?'},
+];
+
+let idx=0, ok=0, answered=false;
+const missionText = document.getElementById('missionText');
+const imgwrap = document.getElementById('imgwrap');
+const feedback = document.getElementById('feedback');
+document.getElementById('total').textContent = MISSIONS.length;
+
+function nextMission(){
+  if(idx>=MISSIONS.length){
+    missionText.textContent = `완료! ${ok} / ${MISSIONS.length} 문제를 맞히셨어요.`;
+    feedback.textContent = '길 안내판의 글씨가 작고 복잡하면 어르신은 훨씬 헤매기 쉽습니다. 직접 동행하거나 큰 화살표로 안내해주세요.';
+    feedback.className='feedback ok';
+    return;
+  }
+  answered=false;
+  feedback.textContent=''; feedback.className='feedback';
+  missionText.textContent = MISSIONS[idx].text;
+}
+imgwrap.addEventListener('click', (e)=>{
+  if(answered || idx>=MISSIONS.length) return;
+  const rect = imgwrap.getBoundingClientRect();
+  const xPct = (e.clientX-rect.left)/rect.width*100;
+  const yPct = (e.clientY-rect.top)/rect.height*100;
+
+  let nearest=null, minD=Infinity;
+  SPOTS.forEach(s=>{ const d=Math.hypot(s.x-xPct, s.y-yPct); if(d<minD){minD=d; nearest=s;} });
+
+  answered=true;
+  const m = document.createElement('div');
+  m.className='marker';
+  m.style.left=xPct+'%'; m.style.top=yPct+'%';
+  m.style.background = nearest && nearest.name===MISSIONS[idx].ask ? 'rgba(94,158,110,.65)' : 'rgba(193,89,79,.65)';
+  m.style.border = '2px solid white';
+  imgwrap.appendChild(m);
+
+  const correct = nearest && nearest.name===MISSIONS[idx].ask;
+  if(correct){ ok++; feedback.textContent='정답이에요! 잘 찾으셨어요.'; feedback.className='feedback ok'; }
+  else { feedback.textContent=`아쉬워요. 정답은 "${MISSIONS[idx].ask}" 였어요.`; feedback.className='feedback ng'; }
+  document.getElementById('okCount').textContent = ok;
+
+  setTimeout(()=>{ m.remove(); idx++; nextMission(); }, 1200);
+});
+nextMission();
+})();
+</script>
+</body>
+</html>

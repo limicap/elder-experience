@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="기억력체험">
+<meta name="theme-color" content="#14181C">
+<title>기억력체험 · 어르신 기억력 체험</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#14181C; --bg-panel:#1B2026; --bg-panel-2:#242B32;
+    --ink:#EEEAE2; --ink-dim:#94A0AA; --ink-faint:#5B646D;
+    --amber:#D9A441; --amber-dim:#8A6C33; --teal:#4C8B87; --brick:#B0574A; --line:#333B43;
+    --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{ margin:0; padding:0; width:100%; height:100%; background:var(--bg-deep); color:var(--ink);
+    font-family:'Noto Sans KR',sans-serif; overflow:hidden; overscroll-behavior:none; }
+  .mono{ font-family:'JetBrains Mono',monospace; }
+  #app{ position:fixed; inset:0; display:flex; flex-direction:column; }
+
+  #topbar{ flex-shrink:0; padding: calc(var(--safe-top) + 14px) 18px 12px;
+    display:flex; align-items:center; gap:10px; justify-content:space-between; background:var(--bg-panel); border-bottom:1px solid var(--line); }
+  #topbar h1{ margin:0; font-size:15.5px; font-weight:700; flex:1; }
+  #homeBtn{ width:30px; height:30px; border-radius:50%; background:var(--bg-panel-2); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; color:var(--ink); text-decoration:none; flex-shrink:0; }
+  #phaseBadge{ font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--bg-deep);
+    background:var(--amber); padding:4px 9px; border-radius:5px; white-space:nowrap; }
+
+  #stage{ position:relative; flex:1; min-height:0; overflow-y:auto;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:26px 22px; text-align:center; gap:18px; }
+
+  .eyebrow{ font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; letter-spacing:.1em; color:var(--amber); }
+  .title{ font-size:21px; font-weight:700; margin:0; }
+  .desc{ font-size:13.5px; color:var(--ink-dim); line-height:1.65; max-width:340px; }
+
+  .bigbtn{ background:var(--amber); color:#1B1300; border:none; font-family:'Noto Sans KR',sans-serif;
+    font-weight:700; font-size:15px; padding:13px 30px; border-radius:30px; cursor:pointer; }
+  .ghostbtn{ background:var(--bg-panel-2); color:var(--ink-dim); border:1px solid var(--line); font-family:'Noto Sans KR',sans-serif;
+    font-weight:700; font-size:14px; padding:11px 24px; border-radius:26px; cursor:pointer; }
+
+  #timerRing{ width:88px; height:88px; }
+  #timerRing circle{ fill:none; stroke-width:6; }
+  #timerRing .bg{ stroke:var(--line); }
+  #timerRing .fg{ stroke:var(--amber); stroke-linecap:round; transform:rotate(-90deg); transform-origin:50% 50%; transition:stroke-dashoffset .2s linear; }
+  #timerNum{ font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; fill:var(--ink); }
+
+  .itemGrid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; max-width:320px; width:100%; }
+  .itemCard{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:14px; padding:16px 8px; font-size:16px; font-weight:700; }
+
+  .chipGrid{ display:flex; flex-wrap:wrap; gap:9px; justify-content:center; max-width:360px; }
+  .chip{ background:var(--bg-panel-2); border:1.5px solid var(--line); border-radius:20px; padding:10px 16px;
+    font-size:14.5px; font-weight:700; color:var(--ink); cursor:pointer; }
+  .chip.selected{ border-color:var(--amber); background:rgba(217,164,65,0.16); color:var(--amber); }
+  .chip.picked{ border-color:var(--teal); background:rgba(76,139,135,0.16); color:var(--teal); }
+  .chip.disabled{ opacity:.35; pointer-events:none; }
+
+  .mathQ{ font-size:30px; font-weight:700; font-family:'JetBrains Mono',monospace; }
+  .optRow{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  .opt{ background:var(--bg-panel-2); border:1.5px solid var(--line); border-radius:14px; padding:14px 22px;
+    font-size:17px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--ink); cursor:pointer; }
+  .opt.correct{ border-color:var(--teal); background:rgba(76,139,135,0.2); color:var(--teal); }
+  .opt.wrong{ border-color:var(--brick); background:rgba(176,87,74,0.2); color:var(--brick); }
+
+  #numpadDisplay{ font-family:'JetBrains Mono',monospace; font-size:26px; letter-spacing:.08em; color:var(--ink);
+    background:var(--bg-panel-2); border:1px solid var(--line); border-radius:12px; padding:14px 20px; min-width:220px; }
+  #numpad{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:260px; width:100%; }
+  .numkey{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:12px; padding:14px 0;
+    font-size:19px; font-weight:700; color:var(--ink); cursor:pointer; font-family:'JetBrains Mono',monospace; }
+  .numkey.wide{ grid-column:span 1; }
+
+  .orderList{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:40px; }
+  .orderTag{ background:rgba(217,164,65,0.16); border:1.5px solid var(--amber); color:var(--amber);
+    border-radius:14px; padding:8px 12px; font-size:13px; font-weight:700; }
+
+  .resultScore{ font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:700; color:var(--amber); }
+  .resultLabel{ font-size:13px; color:var(--ink-dim); }
+  .note{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:14px; padding:14px 16px;
+    font-size:13px; color:var(--ink-dim); line-height:1.65; max-width:340px; text-align:left; }
+  .note b{ color:var(--amber); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <a id="homeBtn" href="index.html">&#8592;</a>
+    <h1>기억력 체험</h1>
+    <span id="phaseBadge" class="mono">시작 전</span>
+  </div>
+  <div id="stage"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const stage = document.getElementById('stage');
+  const phaseBadge = document.getElementById('phaseBadge');
+
+  // ---------------- scenario definitions ----------------
+  const SCENARIOS = [
+    {
+      id:'grocery', title:'장보기 목록 기억하기',
+      studyLabel:'오늘 사야 할 물건이에요. 잘 기억해두세요',
+      items:['우유','계란','두부','사과','식빵'],
+      distractors:['참치캔','당근','바나나','라면'],
+      studySeconds:5, recallType:'multiselect'
+    },
+    {
+      id:'route', title:'가는 길 순서 기억하기',
+      studyLabel:'보건소 가는 길, 순서대로 알려드릴게요',
+      steps:['정문으로 들어가기','2층으로 올라가기','파란 문으로 들어가기'],
+      studySeconds:5, recallType:'ordertap'
+    }
+  ];
+
+  let scenarioIndex = 0;
+  let totalCorrect = 0, totalMax = 0;
+  let mathCorrectCount = 0;
+
+  function setBadge(text){ phaseBadge.textContent = text; }
+  function scenario(){ return SCENARIOS[scenarioIndex]; }
+
+  // ---------------- INTRO (overall) ----------------
+  function renderIntro(){
+    setBadge('시작 전');
+    stage.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='18px';
+    wrap.innerHTML = `
+      <div class="eyebrow">MEMORY EXPERIENCE</div>
+      <h2 class="title">기억력 체험</h2>
+      <p class="desc">짧게 <b style="color:var(--ink)">외우고</b> → 잠깐 <b style="color:var(--ink)">다른 일을 하고</b> → 다시 <b style="color:var(--ink)">떠올려보는</b> 3가지 상황을 체험합니다.<br>인지선별검사(MMSE·MoCA 등)에서 쓰는 "등록 → 방해과제 → 지연회상" 구조를 참고했습니다.</p>
+      <button class="bigbtn" id="startBtn">체험 시작하기</button>
+    `;
+    stage.appendChild(wrap);
+    document.getElementById('startBtn').addEventListener('click', ()=>{ scenarioIndex=0; totalCorrect=0; totalMax=0; renderScenarioIntro(); });
+  }
+
+  function renderScenarioIntro(){
+    const sc = scenario();
+    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 준비`);
+    stage.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='16px';
+    wrap.innerHTML = `
+      <div class="eyebrow">SCENARIO ${scenarioIndex+1}</div>
+      <h2 class="title">${sc.title}</h2>
+      <p class="desc">${sc.studyLabel}</p>
+      <button class="bigbtn" id="goStudy">외우기 시작</button>
+    `;
+    stage.appendChild(wrap);
+    document.getElementById('goStudy').addEventListener('click', renderStudy);
+  }
+
+  // ---------------- STUDY phase (with countdown ring) ----------------
+  function renderStudy(){
+    const sc = scenario();
+    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 암기`);
+    stage.innerHTML = '';
+
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='18px';
+
+    let contentHTML = '';
+    if(sc.recallType==='multiselect'){
+      contentHTML = `<div class="itemGrid">${sc.items.map(i=>`<div class="itemCard">${i}</div>`).join('')}</div>`;
+    } else if(sc.recallType==='numberinput'){
+      contentHTML = `<div id="numpadDisplay" class="mono">${sc.number}</div>`;
+    } else if(sc.recallType==='ordertap'){
+      contentHTML = `<div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;">${sc.steps.map((s,i)=>`<div class="chip" style="cursor:default;">${i+1}. ${s}</div>`).join('')}</div>`;
+    }
+
+    wrap.innerHTML = `
+      <div class="eyebrow">암기하세요</div>
+      ${contentHTML}
+      <svg id="timerRing" viewBox="0 0 100 100">
+        <circle class="bg" cx="50" cy="50" r="42"></circle>
+        <circle class="fg" id="ringFg" cx="50" cy="50" r="42"></circle>
+        <text id="timerNum" x="50" y="57" text-anchor="middle">0</text>
+      </svg>
+    `;
+    stage.appendChild(wrap);
+
+    const total = sc.studySeconds;
+    const ringFg = document.getElementById('ringFg');
+    const timerNum = document.getElementById('timerNum');
+    const circumference = 2*Math.PI*42;
+    ringFg.style.strokeDasharray = circumference;
+
+    let remaining = total;
+    timerNum.textContent = remaining;
+    ringFg.style.strokeDashoffset = 0;
+
+    const iv = setInterval(()=>{
+      remaining--;
+      timerNum.textContent = Math.max(0,remaining);
+      ringFg.style.strokeDashoffset = circumference * (1 - remaining/total);
+      if(remaining<=0){
+        clearInterval(iv);
+        renderInterference();
+      }
+    }, 1000);
+  }
+
+  // ---------------- INTERFERENCE phase (quick math x2) ----------------
+  function renderInterference(){
+    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 방해과제`);
+    let qIndex = 0;
+    const questions = [makeMathQ(), makeMathQ()];
+
+    function showQ(){
+      if(qIndex>=questions.length){ renderRecall(); return; }
+      const q = questions[qIndex];
+      stage.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='20px';
+      wrap.innerHTML = `
+        <div class="eyebrow">잠깐! 계산 먼저 풀어주세요</div>
+        <div class="desc">${qIndex+1} / ${questions.length}번째 문제</div>
+        <div class="mathQ">${q.text} = ?</div>
+        <div class="optRow">${q.options.map(o=>`<button class="opt" data-v="${o}">${o}</button>`).join('')}</div>
+      `;
+      stage.appendChild(wrap);
+      [...wrap.querySelectorAll('.opt')].forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const v = +btn.dataset.v;
+          [...wrap.querySelectorAll('.opt')].forEach(b=>b.style.pointerEvents='none');
+          if(v===q.answer){ btn.classList.add('correct'); mathCorrectCount++; }
+          else {
+            btn.classList.add('wrong');
+            const correctBtn=[...wrap.querySelectorAll('.opt')].find(b=>+b.dataset.v===q.answer);
+            if(correctBtn) correctBtn.classList.add('correct');
+          }
+          setTimeout(()=>{ qIndex++; showQ(); }, 700);
+        });
+      });
+    }
+    showQ();
+  }
+  function makeMathQ(){
+    const a = 10+Math.floor(Math.random()*20);
+    const b = 2+Math.floor(Math.random()*9);
+    const answer = a-b;
+    const opts = new Set([answer]);
+    while(opts.size<4) opts.add(answer + (Math.floor(Math.random()*7)-3 || 1));
+    return { text:`${a} - ${b}`, answer, options: shuffle([...opts]) };
+  }
+  function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]); }
+
+  // ---------------- RECALL phase ----------------
+  function renderRecall(){
+    const sc = scenario();
+    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 회상`);
+    stage.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='18px';
+
+    if(sc.recallType==='multiselect'){
+      const pool = shuffle([...sc.items, ...sc.distractors]);
+      wrap.innerHTML = `
+        <div class="eyebrow">아까 본 물건을 모두 골라주세요</div>
+        <div class="chipGrid" id="chipGrid">${pool.map(w=>`<div class="chip" data-w="${w}">${w}</div>`).join('')}</div>
+        <button class="bigbtn" id="submitBtn">회상 완료</button>
+      `;
+      stage.appendChild(wrap);
+      [...wrap.querySelectorAll('.chip')].forEach(c=> c.addEventListener('click', ()=> c.classList.toggle('selected')));
+      document.getElementById('submitBtn').addEventListener('click', ()=>{
+        const selected = [...wrap.querySelectorAll('.chip.selected')].map(c=>c.dataset.w);
+        const correct = selected.filter(w=> sc.items.includes(w)).length;
+        finishScenario(correct, sc.items.length);
+      });
+
+    } else if(sc.recallType==='numberinput'){
+      let entered = '';
+      const digitsOnly = sc.number.replace(/\D/g,'');
+      wrap.innerHTML = `
+        <div class="eyebrow">아까 그 전화번호를 입력해주세요</div>
+        <div id="numpadDisplay" class="mono">${'_'.repeat(digitsOnly.length)}</div>
+        <div id="numpad"></div>
+        <button class="bigbtn" id="submitBtn" disabled style="opacity:.4;">회상 완료</button>
+      `;
+      stage.appendChild(wrap);
+      const display = document.getElementById('numpadDisplay');
+      const numpad = document.getElementById('numpad');
+      const submitBtn = document.getElementById('submitBtn');
+      function renderDisplay(){
+        const padded = entered.padEnd(digitsOnly.length,'_').split('');
+        display.textContent = padded.join('');
+        submitBtn.disabled = entered.length!==digitsOnly.length;
+        submitBtn.style.opacity = submitBtn.disabled ? .4 : 1;
+      }
+      ['1','2','3','4','5','6','7','8','9','⌫','0','확인'].forEach(k=>{
+        const b = document.createElement('button');
+        b.className='numkey'; b.textContent=k;
+        b.addEventListener('click', ()=>{
+          if(k==='⌫'){ entered = entered.slice(0,-1); }
+          else if(k==='확인'){ /* no-op, use submit button */ }
+          else if(entered.length<digitsOnly.length){ entered += k; }
+          renderDisplay();
+        });
+        numpad.appendChild(b);
+      });
+      renderDisplay();
+      submitBtn.addEventListener('click', ()=>{
+        let correctDigits = 0;
+        for(let i=0;i<digitsOnly.length;i++) if(entered[i]===digitsOnly[i]) correctDigits++;
+        const passed = entered===digitsOnly ? digitsOnly.length : correctDigits;
+        finishScenario(passed, digitsOnly.length);
+      });
+
+    } else if(sc.recallType==='ordertap'){
+      const pool = shuffle(sc.steps.map((s,i)=>({s,i})));
+      const picked = [];
+      wrap.innerHTML = `
+        <div class="eyebrow">순서대로 눌러주세요</div>
+        <div class="orderList" id="orderList"></div>
+        <div class="chipGrid" id="poolGrid">${pool.map(p=>`<div class="chip" data-i="${p.i}">${p.s}</div>`).join('')}</div>
+        <button class="bigbtn" id="submitBtn" disabled style="opacity:.4;">회상 완료</button>
+      `;
+      stage.appendChild(wrap);
+      const orderList = document.getElementById('orderList');
+      const submitBtn = document.getElementById('submitBtn');
+      [...wrap.querySelectorAll('#poolGrid .chip')].forEach(c=>{
+        c.addEventListener('click', ()=>{
+          if(c.classList.contains('disabled')) return;
+          picked.push(+c.dataset.i);
+          c.classList.add('disabled');
+          const tag = document.createElement('div');
+          tag.className='orderTag'; tag.textContent = (picked.length)+'. '+sc.steps[+c.dataset.i];
+          orderList.appendChild(tag);
+          if(picked.length===sc.steps.length){ submitBtn.disabled=false; submitBtn.style.opacity=1; }
+        });
+      });
+      submitBtn.addEventListener('click', ()=>{
+        let correct=0;
+        picked.forEach((idx,pos)=>{ if(idx===pos) correct++; });
+        finishScenario(correct, sc.steps.length);
+      });
+    }
+  }
+
+  function finishScenario(correct, max){
+    totalCorrect += correct; totalMax += max;
+    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 결과`);
+    stage.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='14px';
+    const isLast = scenarioIndex === SCENARIOS.length-1;
+    wrap.innerHTML = `
+      <div class="eyebrow">결과</div>
+      <div class="resultScore">${correct} / ${max}</div>
+      <div class="resultLabel">중간에 계산 문제를 풀고 나니 기억이 흐려지지 않았나요?</div>
+      <button class="bigbtn" id="nextBtn">${isLast ? '결과 요약 보기' : '다음 체험'}</button>
+    `;
+    stage.appendChild(wrap);
+    document.getElementById('nextBtn').addEventListener('click', ()=>{
+      if(isLast){ renderSummary(); }
+      else { scenarioIndex++; renderScenarioIntro(); }
+    });
+  }
+
+  function renderSummary(){
+    setBadge('완료');
+    stage.innerHTML = '';
+    const pct = totalMax ? Math.round(totalCorrect/totalMax*100) : 0;
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='16px';
+    wrap.innerHTML = `
+      <div class="eyebrow">체험 종료</div>
+      <h2 class="title">3가지 상황을 모두 마쳤습니다</h2>
+      <div class="resultScore">${pct}%</div>
+      <div class="resultLabel">전체 회상 정확도 (${totalCorrect} / ${totalMax})</div>
+      <div class="note">
+        방금 겪은 "외우기 → 다른 일 하기 → 다시 떠올리기"는 실제 어르신이 일상에서 겪는 순간과 같습니다.<br><br>
+        <b>더 나은 응대 방법</b><br>
+        · 한 번에 하나씩, 짧게 안내해주세요<br>
+        · 중요한 내용은 말로만 하지 말고 메모·문자로 함께 남겨주세요<br>
+        · 이미 말한 내용을 다시 물어봐도 짜증내지 말고 차분히 반복해주세요
+      </div>
+      <button class="ghostbtn" id="restartBtn">처음부터 다시</button>
+    `;
+    stage.appendChild(wrap);
+    document.getElementById('restartBtn').addEventListener('click', renderIntro);
+  }
+
+  renderIntro();
+})();
+</script>
+</body>
+</html>
