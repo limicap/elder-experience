@@ -34,16 +34,34 @@
   #ovCentral{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
     width:46%; height:46%; border-radius:50%; opacity:0;
-    transition:opacity .25s, filter .25s, width .25s, height .25s;
-    background:rgba(10,10,8,0.55); backdrop-filter:blur(18px) brightness(.5); -webkit-backdrop-filter:blur(18px) brightness(.5);
+    transition:opacity .25s, filter .25s, width .25s, height .25s, background .25s;
+    backdrop-filter:blur(18px) brightness(.5); -webkit-backdrop-filter:blur(18px) brightness(.5);
   }
   #ovHemi{ position:absolute; top:0; bottom:0; width:50%; opacity:0; background:#050505; transition:opacity .25s, width .25s; }
-  .floater{
-    position:absolute; border-radius:46% 54% 60% 40%/50% 40% 60% 50%;
-    background:rgba(8,8,6,0.62); backdrop-filter:blur(6px) brightness(.55); -webkit-backdrop-filter:blur(6px) brightness(.55);
-    opacity:0; transition:opacity .25s; animation:drift 9s ease-in-out infinite;
+  .floater{ position:absolute; opacity:0; transition:opacity .25s; animation:drift 10s ease-in-out infinite; pointer-events:none; }
+  .floater svg{ width:100%; height:100%; display:block; overflow:visible; }
+  .floater.fly{
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, rgba(18,16,12,0.7), rgba(18,16,12,0.32) 65%, rgba(18,16,12,0) 100%);
+    filter:blur(.4px);
   }
-  @keyframes drift{ 0%,100%{transform:translate(0,0)} 50%{transform:translate(4px,-3px)} }
+  @keyframes drift{ 0%,100%{transform:translate(0,0) rotate(0deg)} 33%{transform:translate(5px,-4px) rotate(2deg)} 66%{transform:translate(-3px,3px) rotate(-2deg)} }
+
+  /* 당뇨망막병증 단계별 반점 */
+  .dspot{
+    position:absolute; border-radius:38% 62% 55% 45%/48% 42% 58% 52%;
+    background:rgba(14,12,10,0.5); filter:blur(3px); opacity:0; transition:opacity .3s, width .3s, height .3s;
+  }
+  .dspot.red{ background:rgba(122,24,18,0.55); }
+
+  /* 녹내장 - 코쪽/상하부부터 불규칙하게 지워지는 시야 결손 */
+  #ovGlaucoma{
+    background:
+      radial-gradient(ellipse 42% 30% at 8% 38%, rgba(4,4,3,var(--g1,0)) 0%, rgba(4,4,3,0) 72%),
+      radial-gradient(ellipse 46% 26% at 50% 4%, rgba(4,4,3,var(--g2,0)) 0%, rgba(4,4,3,0) 74%),
+      radial-gradient(ellipse 40% 28% at 62% 98%, rgba(4,4,3,var(--g3,0)) 0%, rgba(4,4,3,0) 74%);
+    opacity:0; transition:opacity .25s; backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  }
 
   #divider{ position:absolute; top:0; bottom:0; left:50%; width:0; z-index:5; touch-action:none; }
   #divider .line{ position:absolute; top:0; bottom:0; left:-1px; width:2px; background:rgba(238,234,226,0.85); box-shadow:0 0 12px rgba(0,0,0,.5); }
@@ -54,7 +72,7 @@
   }
   #divider .handle svg{ width:22px; height:22px; }
   .side-tag{
-    position:absolute; top:14px; z-index:4; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12.5px;
+    position:absolute; bottom:14px; z-index:4; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12.5px;
     letter-spacing:.06em; color:rgba(238,234,226,.9); background:rgba(20,24,28,.55); padding:4px 9px; border-radius:20px;
     border:1px solid rgba(238,234,226,.18); pointer-events:none;
   }
@@ -126,19 +144,33 @@
   input[type=range]::-moz-range-track{ height:4px; background:var(--line); border-radius:2px; }
   input[type=range]::-moz-range-thumb{ width:14px; height:14px; border-radius:50%; background:var(--amber); border:3px solid var(--bg-panel); }
 
-  #tipsToggle{
-    width:100%; background:none; border:none; border-top:1px solid var(--line); color:var(--ink-dim);
-    font-family:'Noto Sans KR',sans-serif; font-size:13px; padding:12px 16px; display:flex; align-items:center;
-    justify-content:space-between; margin-top:6px; cursor:pointer;
+  #panelDrag{
+    display:flex; align-items:center; justify-content:center; padding:7px 0 3px; touch-action:none; cursor:grab;
   }
-  #tipsToggle .car{ transition:transform .2s; }
+  #panelDrag .bar{ width:36px; height:4px; border-radius:3px; background:var(--line); }
+
+  #tipsToggle{
+    width:calc(100% - 20px); margin:2px 10px 0; background:rgba(217,164,65,0.1); border:1px solid rgba(217,164,65,.35); border-radius:12px;
+    color:var(--amber); font-family:'Noto Sans KR',sans-serif; font-weight:700; font-size:13.5px; padding:12px 14px; display:flex; align-items:center;
+    justify-content:space-between; cursor:pointer; animation:tipsPulse 2.2s ease-in-out infinite;
+  }
+  #tipsToggle.open{ animation:none; background:rgba(217,164,65,0.16); }
+  @keyframes tipsPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(217,164,65,.35);} 50%{ box-shadow:0 0 0 6px rgba(217,164,65,0);} }
+  #tipsToggle .car{ transition:transform .2s; font-size:15px; }
   #tipsToggle.open .car{ transform:rotate(180deg); }
   #tipsBody{ max-height:0; overflow:hidden; transition:max-height .28s ease; padding:0 16px; }
-  #tipsBody.open{ max-height:280px; padding-bottom:14px; overflow-y:auto; }
+  #tipsBody.open{ max-height:280px; padding-bottom:14px; overflow-y:auto; margin-top:8px; }
   #tipsBody .desc{ font-size:13.5px; line-height:1.65; color:var(--ink); margin:6px 0 12px; }
   #tipsBody .tiplbl{ font-size:11.5px; color:var(--amber); font-weight:700; letter-spacing:.03em; margin-bottom:6px; }
   #tipsBody ul{ margin:0; padding-left:18px; }
   #tipsBody li{ font-size:13px; line-height:1.7; color:var(--ink-dim); margin-bottom:4px; }
+
+  #focusLagBtn{
+    display:none; width:calc(100% - 32px); margin:8px 16px 0; background:var(--bg-panel-2); border:1px solid var(--line);
+    border-radius:10px; color:var(--amber); font-family:'Noto Sans KR',sans-serif; font-weight:700; font-size:13px;
+    padding:10px; cursor:pointer;
+  }
+  #focusLagBtn.show{ display:block; }
 
   #hint{ text-align:center; font-size:10px; color:var(--ink-faint); padding:6px 0 8px; }
 </style>
@@ -156,8 +188,10 @@
       <div class="overlay" id="ovGlare"></div>
       <div class="overlay" id="ovVignette"></div>
       <div class="overlay" id="ovHemi"></div>
+      <div class="overlay" id="ovGlaucoma"></div>
       <div class="overlay"><div id="ovCentral"></div></div>
       <div class="overlay" id="ovFloaters"></div>
+      <div class="overlay" id="ovDiabetic"></div>
     </div>
 
     <a id="homeBtn" href="index.html">&#8592;</a>
@@ -187,6 +221,7 @@
   </div>
 
   <div id="panel">
+    <div id="panelDrag"><div class="bar"></div></div>
     <div class="grouplbl">노화성 안질환 &middot; 8종</div>
     <div id="chips"></div>
     <div class="grouplbl">일반 시각장애 &middot; 5종</div>
@@ -204,7 +239,9 @@
       <input type="range" id="severity" min="0" max="100" value="55">
     </div>
 
-    <button id="tipsToggle"><span>이 질환을 가진 어르신, 이렇게 어려워해요</span><span class="car">&#9662;</span></button>
+    <button id="focusLagBtn">&#128260; 초점 전환 체험 (눌러서 지연 느껴보기)</button>
+
+    <button id="tipsToggle"><span>&#128161; 이 질환을 가진 어르신, 이렇게 어려워해요</span><span class="car">&#9662;</span></button>
     <div id="tipsBody">
       <div class="desc" id="tipsDesc"></div>
       <div class="tiplbl">사회복무요원 응대 팁</div>
@@ -224,6 +261,11 @@
     deuteranopia: "0.625 0.375 0 0 0  0.70 0.30 0 0 0  0 0.30 0.70 0 0  0 0 0 1 0",
     tritanopia:   "0.95 0.05 0 0 0  0 0.433 0.567 0 0  0 0.475 0.525 0 0  0 0 0 1 0"
   };
+  const IDENTITY_MATRIX = "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0";
+  function lerpMatrix(a, b, t){
+    const av=a.trim().split(/\s+/).map(Number), bv=b.trim().split(/\s+/).map(Number);
+    return av.map((v,i)=> (v + (bv[i]-v)*t).toFixed(4)).join(' ');
+  }
 
   // ---------- 노화성 안질환 8종 ----------
   const AGING = [
@@ -232,34 +274,35 @@
       tips:['조명을 밝게 하되 창가 역광·직사광은 피해주세요','글씨는 크고 굵게, 대비가 뚜렷한 자료를 준비하세요','서류 서명란은 손으로 짚어 안내해주세요'],
       apply(t){ const e=Math.pow(t,1.7);
         return { filter:`blur(${1+6*e}px) contrast(${100-55*e}%) saturate(${100-40*e}%) sepia(${12+28*e}%) brightness(${100+3*t}%)`, haze:e }; } },
-    { id:'glaucoma', name:'녹내장', acuity:'터널 시야', group:'aging',
-      desc:'주변 시야부터 좁아져 통 속을 들여다보듯 가운데 좁은 영역만 보입니다. 말기에는 바늘구멍처럼 극도로 좁아져요.',
+    { id:'glaucoma', name:'녹내장', acuity:'비대칭 시야결손', group:'aging',
+      desc:'중심 시력은 말기까지 뚜렷하게 잘 유지되지만, 코 쪽이나 위아래 시야부터 불규칙하게 지워지듯 사라집니다. 눈부심은 심하지 않고 서서히 흐릿해지는 느낌이며, 반대쪽 눈이 보완해줘서 스스로는 한참 눈치채지 못하는 경우가 많아요.',
       tips:['옆·뒤에서 갑자기 말을 걸거나 손대지 마세요','정면으로 천천히 다가가 인기척을 먼저 알려주세요','이동 중 발밑 턱이나 장애물을 말로 알려주세요'],
-      apply(t){ return { filter:`contrast(${100+8*t}%) blur(${t*1.4}px)`, vignette: t<0.34?t*0.6 : t }; } },
+      apply(t){ return { filter:`contrast(${100+4*t}%)`, glaucomaLoss:t }; } },
     { id:'amd', name:'황반변성', acuity:'20/400 · 중심부', group:'aging',
       desc:'시야 한가운데가 검게 얼룩지거나 지워져 마주 본 얼굴·글자의 가운데를 알아보기 어렵습니다. 말기엔 암점 가장자리가 뚜렷해져요.',
       tips:['정면보다 옆에서 살짝 비켜 서면 더 잘 보일 수 있어요','중요한 내용은 글씨보다 말로 또박또박 전달해주세요','작은 글씨 서류는 대신 소리 내어 읽어주세요'],
       apply(t){ return { filter:`contrast(${100-8*t}%) saturate(${100-6*t}%)`, central:t, centralHard: t>0.66 }; } },
     { id:'diabetic', name:'당뇨망막병증', acuity:'반점형 시야손실', group:'aging',
-      desc:'망막 곳곳이 손상돼 시야에 불규칙한 검은 얼룩이 흩어져 나타납니다. 말기(증식성)에는 유리체 출혈로 시야가 붉게 물들기도 해요.',
+      desc:'망막 곳곳이 손상돼 시야에 불규칙하고 경계가 흐릿한 얼룩이 흩어져 나타나며, 실 모양의 부유물도 함께 떠다닐 수 있습니다. 초기엔 작은 얼룩이 몇 군데뿐이지만 중기로 갈수록 크기와 개수가 늘고, 말기(증식성)에는 유리체 출혈로 붉게 물든 반점까지 섞여 시야가 크게 흐려집니다.',
       tips:['같은 물건도 여러 각도에서 다시 보여주세요','바닥 턱·계단은 특히 미리 안내해주세요','시야에 빈 곳이 있을 수 있으니 천천히, 자주 확인하며 설명해주세요'],
       apply(t){ const bloody = t>0.75;
         return { filter:`blur(${1+6*t}px) contrast(${100-30*t}%) brightness(${100-10*t}%) ${bloody?`sepia(${(t-0.75)*140}%) saturate(${100+ (t-0.75)*260}%)`:''}`,
-                 vignette:t*0.35, floaters:t }; } },
+                 vignette:t*0.35, diabeticSpots:t, floaters:t*0.4 }; } },
     { id:'presbyopia', name:'노안', acuity:'근거리 시력저하', group:'aging',
-      desc:'수정체 탄력이 떨어져 가까운 글씨에 초점을 맞추기 어렵습니다. 먼 곳은 잘 보이지만 가까운 글씨는 흐릿하게 겹쳐 보여요.',
+      desc:'수정체 탄력이 떨어져 가까운 글씨에 초점을 맞추기 어렵습니다. 먼 곳은 잘 보이지만 가까운 글씨는 흐릿하게 겹쳐 보여요. 화면을 두 손가락으로 오므리거나 벌려서(핀치 줌) 대상과의 거리를 바꿔보면, 멀어질수록 초점이 맞는 노안 특유의 느낌을 체험할 수 있어요.',
       tips:['서류·화면은 눈에서 조금 떨어뜨려 보여주세요','작고 가는 글씨보다 크고 굵은 글씨 자료를 준비하세요','밝은 조명 아래서 보여주면 훨씬 잘 보여요'],
-      apply(t){ return { filter:`blur(${2+3*t}px) contrast(${100-16*t}%)` }; } },
+      apply(t){ const zoomBlurMul = 0.35 + presbyopiaZoom*1.3;
+        return { filter:`blur(${(2+3*t)*zoomBlurMul}px) contrast(${100-16*t}%)` }; } },
     { id:'rp', name:'망막색소변성증', acuity:'야간·주변시야 소실', group:'aging',
-      desc:'주변 시야부터 서서히 사라져 마치 좁은 원통 속에서 보는 듯하며, 특히 어두운 곳에서 더욱 심해집니다. 녹내장과 비슷하지만 진행이 더 고르게 전체 둘레에서 옵니다.',
+      desc:'주변부 전체가 도넛 모양으로 고르게 좁아지며 마치 좁은 원통(터널) 속에서 보는 듯하고, 특히 어두운 곳에서 사물을 거의 분간 못할 만큼 심해져요(야맹증). 빛에 예민해 눈부심을 자주 느끼고, 명암·색 대비를 구별하는 힘이 떨어져 화면 전체가 뿌옇게 보이기도 합니다. 녹내장과 달리 사방이 골고루 좁아져 발을 헛디디거나 옆 사람과 부딪히기 쉬워요.',
       tips:['어두운 실내·저녁 시간엔 더 신중히 안내해주세요','시야 가장자리에서 다가가면 놀랄 수 있어요, 정면으로 접근하세요','바닥 색이 비슷한 문턱은 꼭 말로 짚어주세요'],
-      apply(t){ return { filter:`brightness(${100-14*t}%) contrast(${100+6*t}%)`, vignette:t*0.95, vignetteSoft:true }; } },
+      apply(t){ return { filter:`brightness(${100-22*t}%) contrast(${100-10*t}%)`, vignette:t*0.95, vignetteSoft:true, haze:t*0.32, glare:t*0.4 }; } },
     { id:'hemianopia', name:'반맹', acuity:'좌/우 시야 절반 소실', group:'aging',
       desc:'뇌졸중 등으로 시야의 절반(주로 한쪽)이 통째로 보이지 않습니다. 정면을 보고 있어도 한쪽에서 다가오는 사람이나 물건을 전혀 인지하지 못해요.',
       tips:['보이지 않는 쪽에서 다가가면 놀랄 수 있어요, 보이는 쪽으로 접근하세요','중요한 물건·서류는 보이는 쪽에 놓아주세요','고개를 돌려 확인하는 습관을 안내해드리면 도움이 돼요'],
       apply(t){ return { hemi:t }; } },
     { id:'floaters_dz', name:'비문증', acuity:'날파리 부유물 시야', group:'aging',
-      desc:'유리체 혼탁으로 눈앞에 실이나 날파리 같은 것이 둥둥 떠다니는 것처럼 보입니다. 밝은 배경을 볼 때 특히 두드러져요.',
+      desc:'유리체 혼탁으로 눈앞에 투명한 실이나 지렁이 모양, 작은 날파리 모양의 것들이 둥둥 떠다니는 것처럼 보입니다. 눈을 움직이면 함께 따라 움직이고, 밝은 배경을 볼 때 특히 두드러져요.',
       tips:['밝은 벽이나 하늘을 보며 대화할 때 더 불편해할 수 있어요','갑자기 부유물이 급격히 늘면 병원 진료가 필요할 수 있다고 안내해주세요','시야 방해로 놓치는 물건이 있는지 한 번 더 확인해주세요'],
       apply(t){ return { filter:`contrast(${100+4*t}%)`, floaters:t*1.15 }; } },
   ];
@@ -277,13 +320,13 @@
       tips:['색상만으로 구분되는 안내(빨간 버튼=위험 등)는 모양이나 글자도 함께 알려주세요','신호등·표지판 설명 시 위치까지 함께 말씀해주세요','약봉투는 색보다 글씨 크기로 구분해드리세요'],
       apply(t, sub){ return { colorblind:sub, colorblindT:t }; } },
     { id:'refractive', name:'굴절장애', acuity:'초점 흐림', group:'general',
-      desc:'각막·수정체의 굴절 이상으로 상이 망막에 정확히 맺히지 않아 전반적으로 뿌옇게 보입니다. 근시·원시·난시가 여기에 해당해요.',
+      desc:'각막·수정체의 굴절 이상으로 상이 망막에 정확히 맺히지 않아 전반적으로 뿌옇게 보입니다. 근시·원시는 물론, 난시가 있으면 가로·세로 등 방향에 따라 흐려지는 정도가 달라 상이 한쪽으로 번져 보이기도 해요.',
       tips:['안경을 쓰고 계신지, 도수가 맞는지 여쭤봐주세요','자료는 적정 거리를 두고 천천히 보여주세요','작은 글씨는 확대해서 보여주세요'],
-      apply(t){ return { filter:`blur(${1+5*t}px)` }; } },
+      apply(t){ return { filter:`blur(${0.5+3*t}px)`, astig:t }; } },
     { id:'accommodative', name:'조절장애', acuity:'초점 전환 지연', group:'general',
-      desc:'가까운 곳과 먼 곳 사이에서 초점을 빠르게 바꾸지 못합니다. 화면을 보다 사람 얼굴을 보면 한동안 흐릿하게 보여요.',
+      desc:'가까운 곳과 먼 곳 사이에서 초점을 빠르게 바꾸지 못합니다. 화면을 보다 사람 얼굴을 보면 한동안 흐릿하다가 서서히 초점이 맞아요. 아래 "초점 전환 체험" 버튼을 눌러 그 지연을 직접 느껴보세요.',
       tips:['화면과 사람을 번갈아 봐야 할 땐 잠시 기다려주세요','시선을 옮기시라고 미리 말씀해주시면 도움이 돼요','급하게 초점을 요구하는 상황은 피해주세요'],
-      apply(t){ return { filter:`blur(${1.5+2.5*t}px) contrast(${100-10*t}%)` }; } },
+      apply(t){ return { filter:`blur(${1+1.5*t}px) contrast(${100-8*t}%)`, focusLagBase:t }; } },
     { id:'glare', name:'광각장애(눈부심)', acuity:'빛 번짐·눈부심', group:'general',
       desc:'빛에 예민해져 조명이나 창밖 햇빛이 하얗게 번져 보이고, 밝은 곳에서 오히려 시야가 더 나빠집니다.',
       tips:['정면 조명이나 창가 역광을 피해 자리를 안내해주세요','스마트폰·화면 밝기를 낮춰드리는 것도 도움이 돼요','실내외 이동 시 눈이 적응할 시간을 주세요'],
@@ -294,6 +337,7 @@
   let currentCond = CONDITIONS[0];
   let currentSub = 'protanopia';
   let severity = 55;
+  let presbyopiaZoom = 0.5; // 0=핀치아웃(멀리, 선명) ~ 1=핀치인(가까이, 흐림)
 
   const videoNormal = document.getElementById('videoNormal');
   const videoSim = document.getElementById('videoSim');
@@ -302,8 +346,10 @@
   const ovGlare = document.getElementById('ovGlare');
   const ovVignette = document.getElementById('ovVignette');
   const ovHemi = document.getElementById('ovHemi');
+  const ovGlaucoma = document.getElementById('ovGlaucoma');
   const ovCentral = document.getElementById('ovCentral');
   const ovFloaters = document.getElementById('ovFloaters');
+  const ovDiabetic = document.getElementById('ovDiabetic');
   const chipsEl = document.getElementById('chips');
   const chips2El = document.getElementById('chips2');
   const subChipsEl = document.getElementById('subChips');
@@ -315,24 +361,74 @@
   const sevValue = document.getElementById('sevValue');
   const tipsToggle = document.getElementById('tipsToggle');
   const tipsBody = document.getElementById('tipsBody');
+  const focusLagBtn = document.getElementById('focusLagBtn');
+  const hintEl = document.getElementById('hint');
   const tipsDesc = document.getElementById('tipsDesc');
   const tipsList = document.getElementById('tipsList');
 
-  const FLOATER_SPOTS = [
-    {l:'18%',t:'26%',w:'13%',h:'10%', delay:'0s'},
-    {l:'62%',t:'18%',w:'10%',h:'8%', delay:'1.4s'},
-    {l:'30%',t:'62%',w:'16%',h:'12%', delay:'2.6s'},
-    {l:'72%',t:'58%',w:'11%',h:'9%', delay:'.7s'},
-    {l:'48%',t:'40%',w:'9%',h:'7%', delay:'3.3s'},
+  // 실/지렁이 모양(투명, 구불구불) + 날파리 모양(작고 동그란) 부유물
+  const THREAD_SPOTS = [
+    {l:'12%',t:'20%',w:'24%',h:'15%', delay:'0s', rot:'6deg'},
+    {l:'56%',t:'14%',w:'19%',h:'12%', delay:'2.1s', rot:'-16deg'},
+    {l:'24%',t:'56%',w:'26%',h:'16%', delay:'4.4s', rot:'22deg'},
+    {l:'60%',t:'64%',w:'20%',h:'13%', delay:'1.2s', rot:'-6deg'},
   ];
-  FLOATER_SPOTS.forEach(f=>{
+  const FLY_SPOTS = [
+    {l:'70%',t:'50%',w:'3.4%',h:'3%', delay:'.6s'},
+    {l:'42%',t:'32%',w:'2.6%',h:'2.3%', delay:'3.5s'},
+    {l:'80%',t:'24%',w:'2.8%',h:'2.5%', delay:'1.8s'},
+    {l:'30%',t:'40%',w:'2.4%',h:'2.1%', delay:'2.9s'},
+  ];
+  const THREAD_SVG = `<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 30 C 20 5, 35 55, 50 28 S 78 4, 96 32" fill="none" stroke="rgba(14,12,10,0.22)" stroke-width="5" stroke-linecap="round" filter="blur(1.5px)"/>
+      <path d="M4 30 C 20 5, 35 55, 50 28 S 78 4, 96 32" fill="none" stroke="rgba(215,212,200,0.4)" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>`;
+  THREAD_SPOTS.forEach(f=>{
     const d = document.createElement('div');
-    d.className='floater';
+    d.className='floater thread';
+    d.style.left=f.l; d.style.top=f.t;
+    d.dataset.w = parseFloat(f.w); d.dataset.h = parseFloat(f.h);
+    d.style.width=f.w; d.style.height=f.h;
+    d.style.animationDelay=f.delay;
+    d.style.transform=`rotate(${f.rot})`;
+    d.innerHTML = THREAD_SVG;
+    ovFloaters.appendChild(d);
+  });
+  FLY_SPOTS.forEach(f=>{
+    const d = document.createElement('div');
+    d.className='floater fly';
     d.style.left=f.l; d.style.top=f.t;
     d.dataset.w = parseFloat(f.w); d.dataset.h = parseFloat(f.h);
     d.style.width=f.w; d.style.height=f.h;
     d.style.animationDelay=f.delay;
     ovFloaters.appendChild(d);
+  });
+
+  // 5번: 당뇨망막병증 단계별 반점 (초기 소수·소형 → 중기 증가 → 말기 붉은 반점 추가)
+  const DIABETIC_SPOTS = [
+    {l:'22%',t:'30%',w:'5%',h:'4%', at:0.04},
+    {l:'68%',t:'22%',w:'4%',h:'5%', at:0.07},
+    {l:'40%',t:'55%',w:'6%',h:'5%', at:0.14},
+    {l:'30%',t:'68%',w:'7%',h:'6%', at:0.30},
+    {l:'75%',t:'60%',w:'6%',h:'5%', at:0.34},
+    {l:'55%',t:'25%',w:'8%',h:'6%', at:0.40},
+    {l:'15%',t:'50%',w:'6%',h:'5%', at:0.46},
+    {l:'62%',t:'42%',w:'9%',h:'7%', at:0.52},
+    {l:'35%',t:'20%',w:'6%',h:'5%', at:0.58},
+    {l:'80%',t:'35%',w:'7%',h:'6%', at:0.64},
+    {l:'25%',t:'42%',w:'10%',h:'8%', at:0.72, red:true},
+    {l:'58%',t:'65%',w:'11%',h:'9%', at:0.78, red:true},
+    {l:'45%',t:'45%',w:'9%',h:'7%', at:0.85, red:true},
+    {l:'70%',t:'20%',w:'8%',h:'6%', at:0.90, red:true},
+  ];
+  DIABETIC_SPOTS.forEach(f=>{
+    const d = document.createElement('div');
+    d.className='dspot'+(f.red?' red':'');
+    d.style.left=f.l; d.style.top=f.t;
+    d.dataset.w = parseFloat(f.w); d.dataset.h = parseFloat(f.h);
+    d.dataset.at = f.at;
+    d.style.width=f.w; d.style.height=f.h;
+    ovDiabetic.appendChild(d);
   });
 
   function makeChip(c, container){
@@ -420,18 +516,32 @@
       ovVignette.style.background = `radial-gradient(circle at 50% 50%, transparent ${Math.max(2,inner*0.4)}%, rgba(0,0,0,${0.65+vig*0.32}) ${inner+softness}%)`;
     }
 
-    // hemianopia half-field
+    // hemianopia half-field (7번: 오른쪽을 가려 - 손잡이가 오른쪽으로 슬라이드하며 비교하는 구조와 자연스럽게 맞물림)
     const hemi = res.hemi||0;
     ovHemi.style.opacity = hemi>0 ? Math.min(1, 0.35+hemi*0.75) : 0;
-    ovHemi.style.left = 0; ovHemi.style.right='auto';
+    ovHemi.style.right = 0; ovHemi.style.left='auto';
     ovHemi.style.width = hemi>0 ? '50%' : '0';
 
-    // central scotoma
+    // central scotoma (3번: 초기엔 부드러운 그라데이션, 말기로 갈수록 코어가 넓어지고 경계가 또렷해짐)
     const central = res.central||0;
-    ovCentral.style.opacity = central>0 ? Math.min(0.96, 0.22+central*0.72) : 0;
+    ovCentral.style.opacity = central>0 ? Math.min(0.97, 0.24+central*0.7) : 0;
     ovCentral.style.width = (28+central*28)+'%';
     ovCentral.style.height = (28+central*28)+'%';
-    ovCentral.style.filter = res.centralHard ? 'blur(2px)' : 'blur(0px)';
+    if(central>0){
+      const coreStop = 30 + central*32;
+      const edgeStop = 80 - central*24;
+      ovCentral.style.background = `radial-gradient(circle, rgba(8,8,6,${0.9+central*0.08}) ${coreStop}%, rgba(8,8,6,${0.55+central*0.25}) ${(coreStop+edgeStop)/2}%, rgba(8,8,6,0) ${edgeStop}%)`;
+      ovCentral.style.filter = `blur(${(1-central)*9+1.5}px)`;
+    }
+
+    // 6번: 녹내장 - 코쪽/상하부부터 불규칙하게 지워지는 시야 결손 (중심은 끝까지 유지)
+    const gloss = res.glaucomaLoss||0;
+    ovGlaucoma.style.opacity = gloss>0 ? 1 : 0;
+    if(gloss>0){
+      ovGlaucoma.style.setProperty('--g1', Math.min(0.92, 0.15+gloss*0.85));
+      ovGlaucoma.style.setProperty('--g2', Math.min(0.85, Math.max(0,(gloss-0.15)*1.0)));
+      ovGlaucoma.style.setProperty('--g3', Math.min(0.88, Math.max(0,(gloss-0.35)*1.2)));
+    }
 
     // haze
     const haze = res.haze||0;
@@ -452,9 +562,10 @@
       videoGhost.style.opacity = 0;
     }
 
-    // colorblind (SVG matrix via filter)
+    // 9번: 색각장애 - 실제 색이 다르게 보이도록 SVG 컬러매트릭스 적용, 강도 슬라이더는 정상색↔색맹색 사이를 보간
     if(res.colorblind){
-      const m = CB_MATRIX[res.colorblind];
+      const mixT = res.colorblindT!=null? res.colorblindT : 1;
+      const m = lerpMatrix(IDENTITY_MATRIX, CB_MATRIX[res.colorblind], mixT);
       const id = 'cbmat';
       let svg = document.getElementById('cb-svg');
       if(!svg){
@@ -466,12 +577,28 @@
       } else {
         svg.querySelector('feColorMatrix').setAttribute('values', m);
       }
-      const mixT = res.colorblindT!=null? res.colorblindT : 1;
       videoSim.style.filter = (videoSim.style.filter==='none'?'':videoSim.style.filter+' ') + `url(#${id})`;
       videoSim.style.opacity = 1;
     }
 
-    // floaters
+    // 10번: 굴절장애(난시) - 방향에 따라 다르게 흐려지는 느낌을 SVG 방향성 블러로 추가
+    if(res.astig!=null && res.astig>0){
+      const sx = (1.2+3*res.astig).toFixed(2), sy = (0.3+0.8*res.astig).toFixed(2);
+      const id = 'astigmat';
+      let svg = document.getElementById('astig-svg');
+      if(!svg){
+        svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        svg.id='astig-svg'; svg.setAttribute('width','0'); svg.setAttribute('height','0');
+        svg.style.position='absolute';
+        svg.innerHTML = `<filter id="${id}"><feGaussianBlur stdDeviation="${sx} ${sy}"/></filter>`;
+        document.body.appendChild(svg);
+      } else {
+        svg.querySelector('feGaussianBlur').setAttribute('stdDeviation', `${sx} ${sy}`);
+      }
+      videoSim.style.filter = (videoSim.style.filter==='none'?'':videoSim.style.filter+' ') + `url(#${id})`;
+    }
+
+    // floaters (비문증 실/날파리 + 당뇨망막병증 실 부유물 겸용)
     [...ovFloaters.children].forEach((el)=>{
       const f = res.floaters||0;
       el.style.opacity = f>0 ? Math.min(0.94, f*0.95) : 0;
@@ -479,6 +606,31 @@
       el.style.width = (baseW*(1+f*1.7))+'%';
       el.style.height = (baseH*(1+f*1.7))+'%';
     });
+
+    // 5번: 당뇨망막병증 단계별 반점 (초기 소수 → 중기 증가 → 말기 붉은 반점 추가)
+    const dTotal = res.diabeticSpots||0;
+    [...ovDiabetic.children].forEach(el=>{
+      const at = +el.dataset.at;
+      if(dTotal>at){
+        const grow = Math.min(1, (dTotal-at)/0.22);
+        el.style.opacity = (el.classList.contains('red') ? 0.5 : 0.62) * grow;
+        const baseW = +el.dataset.w, baseH = +el.dataset.h;
+        el.style.width = (baseW*(1+grow*0.7))+'%';
+        el.style.height = (baseH*(1+grow*0.7))+'%';
+      } else {
+        el.style.opacity = 0;
+      }
+    });
+
+    // 2번: 조절장애 - 초점 전환 체험 버튼 노출
+    focusLagBtn.classList.toggle('show', currentCond.id==='accommodative');
+
+    // 1번: 노안 - 핀치줌 힌트
+    if(currentCond.id==='presbyopia'){
+      hintEl.textContent = '두 손가락으로 화면을 오므리거나 벌려 거리를 바꿔보세요 (멀어질수록 선명해져요)';
+    } else {
+      hintEl.textContent = '손잡이를 좌우로 밀어 1(정상)·2(체험) 시야를 비교해보세요';
+    }
 
     tipsDesc.textContent = currentCond.desc;
     tipsList.innerHTML = currentCond.tips.map(x=>`<li>${x}</li>`).join('');
@@ -488,6 +640,61 @@
     const open = tipsBody.classList.toggle('open');
     tipsToggle.classList.toggle('open', open);
   });
+
+  // 2번: 패널 상단 경계를 드래그해서 설명 패널을 열고 닫기
+  const panelDrag = document.getElementById('panelDrag');
+  (function(){
+    let startY = 0, dragged = false;
+    function down(e){ startY = (e.touches?e.touches[0].clientY:e.clientY); dragged=false; }
+    function move(e){
+      const y = (e.touches?e.touches[0].clientY:e.clientY);
+      const dy = y - startY;
+      if(Math.abs(dy) < 26) return;
+      dragged = true;
+      const open = tipsBody.classList.contains('open');
+      if(dy < -26 && !open){ tipsBody.classList.add('open'); tipsToggle.classList.add('open'); startY = y; }
+      else if(dy > 26 && open){ tipsBody.classList.remove('open'); tipsToggle.classList.remove('open'); startY = y; }
+    }
+    panelDrag.addEventListener('touchstart', down, {passive:true});
+    panelDrag.addEventListener('touchmove', move, {passive:true});
+    panelDrag.addEventListener('pointerdown', down);
+    panelDrag.addEventListener('pointermove', e=>{ if(e.buttons) move(e); });
+  })();
+
+  // 10번: 조절장애 - 초점 전환 지연(포커스랙) 체험
+  focusLagBtn.addEventListener('click', ()=>{
+    if(currentCond.id!=='accommodative') return;
+    const t = severity/100;
+    videoSim.style.transition = 'filter .05s linear';
+    videoSim.style.filter = `blur(${6+6*t}px) contrast(${100-8*t}%)`;
+    setTimeout(()=>{
+      videoSim.style.transition = 'filter 1.3s cubic-bezier(.2,.7,.3,1)';
+      videoSim.style.filter = `blur(${1+1.5*t}px) contrast(${100-8*t}%)`;
+      setTimeout(()=>{ videoSim.style.transition=''; }, 1350);
+    }, 90);
+  });
+
+  // 1번: 노안 - 핀치줌 제스처로 거리(초점) 체험
+  (function(){
+    let startDist = 0, startZoom = presbyopiaZoom;
+    function dist(touches){
+      const dx = touches[0].clientX-touches[1].clientX, dy = touches[0].clientY-touches[1].clientY;
+      return Math.hypot(dx,dy);
+    }
+    stageEl().addEventListener('touchstart', e=>{
+      if(e.touches.length===2){ startDist = dist(e.touches); startZoom = presbyopiaZoom; }
+    }, {passive:true});
+    stageEl().addEventListener('touchmove', e=>{
+      if(e.touches.length===2 && currentCond.id==='presbyopia'){
+        const d = dist(e.touches);
+        const ratio = d/(startDist||d);
+        // 손가락을 벌리면(ratio>1, 핀치아웃) 더 가까이 당겨보는 느낌 -> zoom 증가(흐려짐)
+        presbyopiaZoom = Math.max(0, Math.min(1, startZoom + (ratio-1)*0.9));
+        render();
+      }
+    }, {passive:true});
+    function stageEl(){ return document.getElementById('stage'); }
+  })();
 
   const stage = document.getElementById('stage');
   const divider = document.getElementById('divider');
