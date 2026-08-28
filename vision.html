@@ -17,7 +17,7 @@
   #app{ position:fixed; inset:0; display:flex; flex-direction:column; }
 
   /* ---------- STAGE (camera) ---------- */
-  #stage{ position:relative; flex:1; min-height:0; background:#000; overflow:hidden; }
+  #stage{ position:relative; flex:1; min-height:0; background:#000; overflow:hidden; touch-action:none; }
   #stage video{
     position:absolute; inset:0; width:100%; height:100%;
     object-fit:cover; background:#000;
@@ -26,6 +26,7 @@
   #simWrap{ position:absolute; inset:0; z-index:2; overflow:hidden; clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
   #videoSim{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   #videoGhost{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; mix-blend-mode:screen; }
+  #cbCanvas{ position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
 
   .overlay{ position:absolute; inset:0; pointer-events:none; }
   #ovVignette{ background:transparent; opacity:0; transition:opacity .25s; }
@@ -153,9 +154,9 @@
   input[type=range]::-moz-range-thumb{ width:14px; height:14px; border-radius:50%; background:var(--amber); border:3px solid var(--bg-panel); }
 
   #panelDrag{
-    display:flex; align-items:center; justify-content:center; padding:7px 0 3px; touch-action:none; cursor:grab;
+    display:flex; align-items:center; justify-content:center; padding:18px 0 16px; touch-action:none; cursor:grab;
   }
-  #panelDrag .bar{ width:36px; height:4px; border-radius:3px; background:var(--line); }
+  #panelDrag .bar{ width:44px; height:5px; border-radius:3px; background:var(--line); }
 
   #tipsToggle{
     width:calc(100% - 20px); margin:2px 10px 0; background:rgba(217,164,65,0.1); border:1px solid rgba(217,164,65,.35); border-radius:12px;
@@ -202,14 +203,6 @@
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute;overflow:hidden;pointer-events:none;">
-  <defs>
-    <filter id="cbMatrix" color-interpolation-filters="sRGB">
-      <feColorMatrix id="cbMatrixValues" type="matrix"
-        values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" />
-    </filter>
-  </defs>
-</svg>
 <div id="app">
 
   <div id="stage">
@@ -217,6 +210,7 @@
 
     <div id="simWrap">
       <video id="videoSim" autoplay playsinline muted></video>
+      <canvas id="cbCanvas"></canvas>
       <video id="videoGhost" autoplay playsinline muted></video>
       <div class="overlay" id="ovHaze"></div>
       <div class="overlay" id="ovGlare"></div>
@@ -255,7 +249,7 @@
   </div>
 
   <div id="panel">
-    <div id="panelDrag"><div class="bar"></div><span class="tapHint">탭 또는 아래로 밀면 화면 확대</span></div>
+    <div id="panelDrag"><div class="bar"></div><span class="tapHint">위·중간·아래로 밀어보세요</span></div>
     <div id="compactInfo"></div>
     <div id="groupTabs">
       <button class="gtab active" data-g="aging">노화성 안질환 <span class="cnt">8종</span></button>
@@ -292,6 +286,16 @@
 <script>
 (function(){
   "use strict";
+
+  // iOS Safari는 viewport의 user-scalable=no를 접근성 이유로 무시하는 경우가 많아,
+  // 노안 핀치 제스처 중 카메라 화면이 아니라 페이지 전체가 확대/축소되는 문제가 생길 수 있음.
+  // 네이티브 제스처(gesturestart 등)와 두 손가락 touchmove를 직접 막아 페이지 자체 줌을 차단.
+  ['gesturestart','gesturechange','gestureend'].forEach(ev=>{
+    document.addEventListener(ev, e=> e.preventDefault());
+  });
+  document.addEventListener('touchmove', function(e){
+    if(e.touches && e.touches.length > 1) e.preventDefault();
+  }, { passive:false });
 
   // ---------- 노화성 안질환 8종 ----------
   const AGING = [
@@ -376,6 +380,8 @@
   const videoNormal = document.getElementById('videoNormal');
   const videoSim = document.getElementById('videoSim');
   const videoGhost = document.getElementById('videoGhost');
+  const cbCanvas = document.getElementById('cbCanvas');
+  const cbCtx = cbCanvas.getContext('2d', { willReadFrequently:true });
   const ovHaze = document.getElementById('ovHaze');
   const ovGlare = document.getElementById('ovGlare');
   const ovVignette = document.getElementById('ovVignette');
@@ -402,20 +408,65 @@
   const hintEl = document.getElementById('hint');
   const tipsDesc = document.getElementById('tipsDesc');
   const tipsList = document.getElementById('tipsList');
-  const cbMatrixEl = document.getElementById('cbMatrixValues');
 
   // 적록색맹(protanopia 계열) 색상 변환 매트릭스 - 적색 성분을 녹색/갈색 쪽으로 크게 끌어당겨
-  // "빨간색이 초록색처럼 보이는" 느낌을 실제 색각이상 시뮬레이션 매트릭스로 재현
-  const IDENTITY_M = [1,0,0,0,0, 0,1,0,0,0, 0,0,1,0,0, 0,0,0,1,0];
-  const PROTANOPIA_M = [
-    0.152,1.053,-0.205,0,0,
-    0.115,0.786,0.099,0,0,
-    -0.004,-0.048,1.052,0,0,
-    0,0,0,1,0
+  // "빨간색이 초록색처럼 보이는" 느낌을 재현. iOS Safari는 video 태그에 SVG feColorMatrix를
+  // CSS filter:url()로 적용하는 것을 안정적으로 지원하지 않아, 캔버스에 프레임을 그린 뒤
+  // 픽셀 단위로 직접 매트릭스를 곱하는 방식으로 구현한다.
+  const IDENTITY_3 = [1,0,0, 0,1,0, 0,0,1];
+  const PROTANOPIA_3 = [
+    0.152,1.053,-0.205,
+    0.115,0.786,0.099,
+    -0.004,-0.048,1.052
   ];
-  function setColorblindMatrix(t){
-    const vals = IDENTITY_M.map((v,i)=> (v + (PROTANOPIA_M[i]-v)*t).toFixed(3)).join(' ');
-    cbMatrixEl.setAttribute('values', vals);
+  let cbRunning = false;
+  let cbLoopId = 0;
+  let cbLastT = 0;
+  function cbInterpMatrix(t){
+    return IDENTITY_3.map((v,i)=> v + (PROTANOPIA_3[i]-v)*t);
+  }
+  function cbDrawFrame(id){
+    if(!cbRunning || id !== cbLoopId) return;
+    const srcVideo = videoNormal;
+    if(srcVideo.videoWidth > 0){
+      const rect = document.getElementById('stage').getBoundingClientRect();
+      const targetW = 300, targetH = Math.round(targetW * (rect.height/rect.width || 1.8));
+      if(cbCanvas.width !== targetW || cbCanvas.height !== targetH){
+        cbCanvas.width = targetW; cbCanvas.height = targetH;
+      }
+      const vw = srcVideo.videoWidth, vh = srcVideo.videoHeight;
+      const scale = Math.max(targetW/vw, targetH/vh);
+      const sw = targetW/scale, sh = targetH/scale;
+      const sx = (vw-sw)/2, sy = (vh-sh)/2;
+      cbCtx.drawImage(srcVideo, sx, sy, sw, sh, 0, 0, targetW, targetH);
+      const m = cbInterpMatrix(cbLastT);
+      const imgData = cbCtx.getImageData(0, 0, targetW, targetH);
+      const d = imgData.data;
+      for(let i=0;i<d.length;i+=4){
+        const r=d[i], g=d[i+1], b=d[i+2];
+        d[i]   = Math.min(255, Math.max(0, m[0]*r + m[1]*g + m[2]*b));
+        d[i+1] = Math.min(255, Math.max(0, m[3]*r + m[4]*g + m[5]*b));
+        d[i+2] = Math.min(255, Math.max(0, m[6]*r + m[7]*g + m[8]*b));
+      }
+      cbCtx.putImageData(imgData, 0, 0);
+    }
+    requestAnimationFrame(()=> cbDrawFrame(id));
+  }
+  function startColorblindCanvas(t){
+    cbLastT = t;
+    videoSim.style.opacity = '0';
+    cbCanvas.style.display = 'block';
+    if(!cbRunning){
+      cbRunning = true;
+      cbLoopId++;
+      cbDrawFrame(cbLoopId);
+    }
+  }
+  function stopColorblindCanvas(){
+    cbRunning = false;
+    cbLoopId++;
+    videoSim.style.opacity = '1';
+    cbCanvas.style.display = 'none';
   }
 
   // 실/지렁이 모양(투명, 구불구불) + 날파리 모양(작고 동그란) 부유물
@@ -646,11 +697,12 @@
       videoGhost.style.opacity = 0;
     }
 
-    // 6번: 색각장애(적록색맹) - 실제 색각이상 시뮬레이션 매트릭스(SVG feColorMatrix)를 사용해
-    // 적색이 녹색/갈색 쪽으로 뚜렷하게 옮겨가도록 재현 (다른 필터와 섞지 않고 단독 적용해 iOS Safari 호환성 유지)
+    // 6번: 색각장애(적록색맹) - 캔버스에 프레임을 그려 픽셀 단위로 색상 매트릭스를 적용
+    // (video 태그에 대한 SVG filter:url()은 Safari에서 렌더링되지 않아 캔버스 방식으로 전환)
     if(res.colorblind){
-      setColorblindMatrix(res.colorblind);
-      videoSim.style.filter = 'url(#cbMatrix)';
+      startColorblindCanvas(res.colorblind);
+    } else {
+      stopColorblindCanvas();
     }
 
     // floaters (비문증 실/날파리 + 당뇨망막병증 실 부유물 겸용) - 6번: 세기가 오를수록 각기 다른 위치의 개체가 순차적으로 늘어남
@@ -708,35 +760,45 @@
   tipsToggle.addEventListener('click', ()=>{
     const open = tipsBody.classList.toggle('open');
     tipsToggle.classList.toggle('open', open);
+    panelState = open ? 'up' : 'mid';
   });
 
-  // 2번: 손끝으로 드래그하면 설명 패널을 열고 닫음 / 10번: 가볍게 탭하면 컴팩트 모드로 카메라 화면을 크게
-  // 8번 버그수정: 이전에는 touch와 pointer 이벤트를 동시에 등록해서 탭 한 번에 토글이 두 번 일어나(서로 상쇄되어) 아무 반응이 없었음 -> Pointer Events 하나만 사용
+  // 2번: 손끝으로 드래그하면 위(팁 열림)·중간(기본)·아래(컴팩트, 카메라 확대) 3단계로 이동
+  // 한 번의 드래그 제스처당 한 단계만 이동하도록 stepTaken 플래그로 제한 (여러 단계가 한 번에 건너뛰는 문제 방지)
   const panelDrag = document.getElementById('panelDrag');
+  let panelState = 'mid'; // 'up' | 'mid' | 'down'
+  function applyPanelState(){
+    panelEl.classList.toggle('compact', panelState==='down');
+    const openTips = panelState==='up';
+    tipsBody.classList.toggle('open', openTips);
+    tipsToggle.classList.toggle('open', openTips);
+  }
   (function(){
-    let startY = 0, startX = 0, moved = false, active = false;
+    let startY = 0, startX = 0, moved = false, active = false, stepTaken = false;
+    const TH = 30;
     function down(e){
-      active = true; moved = false;
+      active = true; moved = false; stepTaken = false;
       startY = e.clientY; startX = e.clientX;
       try{ panelDrag.setPointerCapture(e.pointerId); }catch(err){}
     }
     function move(e){
-      if(!active) return;
+      if(!active || stepTaken) return;
       const dy = e.clientY - startY, dx = e.clientX - startX;
       if(Math.abs(dy) > 8 || Math.abs(dx) > 8) moved = true;
       if(!moved) return;
-      if(panelEl.classList.contains('compact')){
-        if(dy < -40){ panelEl.classList.remove('compact'); startY = e.clientY; }
-        return;
+      if(dy < -TH && panelState !== 'up'){
+        panelState = panelState === 'down' ? 'mid' : 'up';
+        applyPanelState(); stepTaken = true;
+      } else if(dy > TH && panelState !== 'down'){
+        panelState = panelState === 'up' ? 'mid' : 'down';
+        applyPanelState(); stepTaken = true;
       }
-      if(Math.abs(dy) < 26) return;
-      const open = tipsBody.classList.contains('open');
-      if(dy < -26 && !open){ tipsBody.classList.add('open'); tipsToggle.classList.add('open'); startY = e.clientY; }
-      else if(dy > 26 && open){ tipsBody.classList.remove('open'); tipsToggle.classList.remove('open'); startY = e.clientY; }
-      else if(dy > 26 && !open){ panelEl.classList.add('compact'); startY = e.clientY; }
     }
     function up(){
-      if(active && !moved) panelEl.classList.toggle('compact');
+      if(active && !moved){
+        panelState = panelState === 'up' ? 'mid' : (panelState === 'down' ? 'mid' : 'down');
+        applyPanelState();
+      }
       active = false;
     }
     panelDrag.addEventListener('pointerdown', down);
