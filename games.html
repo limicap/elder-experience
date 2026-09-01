@@ -398,6 +398,7 @@ var ITEM_LIST=[
 ];
 
 var ITEMS_IMG=new Image(); var itemsImgLoaded=false;
+var iCvs, iCtx, iSt, iIdx;
 ITEMS_IMG.onload=function(){itemsImgLoaded=true; if(iCtx) drawItems();};
 ITEMS_IMG.src='assets/img/household_items.png';
 
