@@ -322,7 +322,7 @@
       tips:['같은 물건도 여러 각도에서 다시 보여주세요','바닥 턱·계단은 특히 미리 안내해주세요','시야에 빈 곳이 있을 수 있으니 천천히, 자주 확인하며 설명해주세요'],
       apply(t){ return { diabeticSpots:t, floaters:t*0.5 }; } },
     { id:'presbyopia', name:'노안', acuity:'근거리 시력저하', group:'aging',
-      desc:'수정체 탄력이 떨어져 가까운 글씨에 초점을 맞추기 어렵습니다. 먼 곳은 잘 보이지만 가까운 글씨는 흐릿하게 겹쳐 보여요. 화면을 두 손가락으로 오므리거나 벌려서(핀치 줌) 대상과의 거리를 바꿔보면, 멀어질수록 초점이 맞는 노안 특유의 느낌을 체험할 수 있어요.',
+      desc:'수정체 탄력이 떨어져 가까운 글씨에 초점을 맞추기 어렵습니다. 먼 곳은 잘 보이지만 가까운 글씨는 흐릿하게 겹쳐 보여요.',
       tips:['서류·화면은 눈에서 조금 떨어뜨려 보여주세요','작고 가는 글씨보다 크고 굵은 글씨 자료를 준비하세요','밝은 조명 아래서 보여주면 훨씬 잘 보여요'],
       apply(t){ return { filter:`blur(${(1+5*t)*presbyopiaZoom}px) contrast(${100-16*t*presbyopiaZoom}%)`, presbyZoom:presbyopiaZoom }; } },
     { id:'rp', name:'망막색소변성증', acuity:'야간·주변시야 소실', group:'aging',
