@@ -174,20 +174,13 @@
   #tipsBody ul{ margin:0; padding-left:18px; }
   #tipsBody li{ font-size:13px; line-height:1.7; color:var(--ink-dim); margin-bottom:4px; }
 
-  #focusLagBtn{
-    display:none; width:calc(100% - 32px); margin:8px 16px 0; background:var(--bg-panel-2); border:1px solid var(--line);
-    border-radius:10px; color:var(--amber); font-family:'Noto Sans KR',sans-serif; font-weight:700; font-size:13px;
-    padding:10px; text-align:center;
-  }
-  #focusLagBtn.show{ display:block; }
-
   #stageHint{
-    position:absolute; left:50%; bottom:52px; transform:translateX(-50%); z-index:9;
-    max-width:88%; text-align:center; font-size:13px; font-weight:700; line-height:1.5; color:var(--amber);
-    background:rgba(20,24,28,.72); border:1px solid rgba(217,164,65,.45); border-radius:16px;
-    padding:9px 16px; pointer-events:none; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-    box-shadow:0 4px 14px rgba(0,0,0,.35); animation:tipsPulse 2.2s ease-in-out infinite;
+    width:calc(100% - 20px); margin:10px 10px 2px; text-align:center; font-size:12.5px; font-weight:700;
+    line-height:1.5; color:var(--sage);
+    background:rgba(122,148,113,0.12); border:1px solid rgba(122,148,113,.45); border-radius:12px;
+    padding:9px 14px;
   }
+  #panel.compact #stageHint{ display:none; }
 
   /* 10번: 컴팩트 모드 - 손잡이를 탭하면 선택 UI를 숨기고 카메라 화면을 크게 */
   #panelDrag{ position:relative; }
@@ -199,7 +192,6 @@
   #panel.compact #subChips,
   #panel.compact #stageRow,
   #panel.compact #severityRow,
-  #panel.compact #focusLagBtn,
   #panel.compact #tipsToggle,
   #panel.compact #tipsBody{ display:none; }
   #panel.compact #compactInfo{ display:block; }
@@ -230,7 +222,6 @@
     <a id="homeBtn" href="index.html">&#8592;</a>
     <div class="side-tag" id="tagLeft">1 &middot; 정상 시야</div>
     <div class="side-tag" id="tagRight">2 &middot; 체험 중</div>
-    <div id="stageHint">손잡이를 좌우로 밀어 1(정상)&middot;2(체험) 시야를 비교해보세요</div>
 
     <div id="divider">
       <div class="line"></div>
@@ -257,6 +248,7 @@
   <div id="panel">
     <div id="panelDrag"><div class="bar"></div><span class="tapHint">위·중간·아래로 밀어보세요</span></div>
     <div id="compactInfo"></div>
+    <div id="stageHint">&#9995; 손잡이 좌우 드래그 &middot; 1(정상)&middot;2(체험) 비교</div>
     <div id="groupTabs">
       <button class="gtab active" data-g="aging">노화성 안질환 <span class="cnt">8종</span></button>
       <button class="gtab" data-g="general">일반 시각장애 <span class="cnt">8종</span></button>
@@ -275,8 +267,6 @@
       <div class="lbl"><span class="lt" id="sevLabel">체험 강도</span><span class="lv mono" id="sevValue">55%</span></div>
       <input type="range" id="severity" min="0" max="100" value="55">
     </div>
-
-    <div id="focusLagBtn">&#128260; 자동으로 초점이 흐려졌다 맞춰지는 걸 체험해보세요</div>
 
     <button id="tipsToggle"><span id="tipsToggleLabel">&#128161; 어르신은 이렇게 어려워요</span><span class="car">&#9662;</span></button>
     <div id="tipsBody">
@@ -409,7 +399,6 @@
   const tipsToggle = document.getElementById('tipsToggle');
   const tipsToggleLabel = document.getElementById('tipsToggleLabel');
   const tipsBody = document.getElementById('tipsBody');
-  const focusLagBtn = document.getElementById('focusLagBtn');
   const hintEl = document.getElementById('stageHint');
   const tipsDesc = document.getElementById('tipsDesc');
   const tipsList = document.getElementById('tipsList');
@@ -742,15 +731,16 @@
       }
     });
 
-    // 2번: 조절장애 - 초점 전환 체험 버튼 노출
-    focusLagBtn.classList.toggle('show', currentCond.id==='accommodative');
-
-    // 1번: 노안 - 핀치줌 힌트(현재 상태 반영)
+    // 조건별 조작법 안내 (개조식으로 간결하게)
     if(currentCond.id==='presbyopia'){
-      const state = presbyopiaZoom<0.35 ? '지금: 멀리 보는 중 (선명)' : presbyopiaZoom>0.65 ? '지금: 가까이 보는 중 (흐림)' : '지금: 보통 거리';
-      hintEl.textContent = `손가락을 벌리면 가까이, 오므리면 멀리 보는 느낌이에요 · ${state}`;
+      const state = presbyopiaZoom<0.35 ? '현재: 선명' : presbyopiaZoom>0.65 ? '현재: 흐림' : '현재: 보통';
+      hintEl.textContent = `🤏 확대=가까이(흐림) · 축소=멀리(선명) · ${state}`;
+    } else if(currentCond.id==='amd'){
+      hintEl.textContent = '👆 화면 터치 · 암점 위치 이동';
+    } else if(currentCond.id==='accommodative'){
+      hintEl.textContent = '🔄 자동 초점 흐림↔선명 반복';
     } else {
-      hintEl.textContent = '손잡이를 좌우로 밀어 1(정상)·2(체험) 시야를 비교해보세요';
+      hintEl.textContent = '✋ 손잡이 좌우 드래그 · 1(정상)·2(체험) 비교';
     }
 
     compactInfo.textContent = `${currentCond.name} · ${sevText(severity)} ${severity}%`;
