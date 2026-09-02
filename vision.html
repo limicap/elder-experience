@@ -248,7 +248,7 @@
   <div id="panel">
     <div id="panelDrag"><div class="bar"></div><span class="tapHint">위·중간·아래로 밀어보세요</span></div>
     <div id="compactInfo"></div>
-    <div id="stageHint">&#9995; 손잡이 드래그 &middot; 1(정상)&middot;2(체험) 비교</div>
+    <div id="stageHint">&#9995; 손잡이 좌우 드래그 &middot; 1(정상)&middot;2(체험) 비교</div>
     <div id="groupTabs">
       <button class="gtab active" data-g="aging">노화성 안질환 <span class="cnt">8종</span></button>
       <button class="gtab" data-g="general">일반 시각장애 <span class="cnt">8종</span></button>
@@ -734,13 +734,13 @@
     // 조건별 조작법 안내 (개조식으로 간결하게)
     if(currentCond.id==='presbyopia'){
       const state = presbyopiaZoom<0.35 ? '현재: 선명' : presbyopiaZoom>0.65 ? '현재: 흐림' : '현재: 보통';
-      hintEl.textContent = `🤏 벌리기=가까이(흐림) · 오므리기=멀리(선명) · ${state}`;
+      hintEl.textContent = `🤏 확대=가까이(흐림) · 축소=멀리(선명) · ${state}`;
     } else if(currentCond.id==='amd'){
       hintEl.textContent = '👆 화면 터치 · 암점 위치 이동';
     } else if(currentCond.id==='accommodative'){
       hintEl.textContent = '🔄 자동 초점 흐림↔선명 반복';
     } else {
-      hintEl.textContent = '✋ 손잡이 드래그 · 1(정상)·2(체험) 비교';
+      hintEl.textContent = '✋ 손잡이 좌우 드래그 · 1(정상)·2(체험) 비교';
     }
 
     compactInfo.textContent = `${currentCond.name} · ${sevText(severity)} ${severity}%`;
