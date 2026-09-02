@@ -66,13 +66,6 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 #voGlare{background:radial-gradient(circle at 50% 42%, rgba(255,252,235,.9), rgba(255,252,235,0) 62%);mix-blend-mode:screen;}
 #voCentral{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46%;aspect-ratio:1/1;border-radius:50%;opacity:0;transition:opacity .2s, filter .2s, width .2s, background .2s;}
 #voHemi{position:absolute;top:0;bottom:0;right:0;left:auto;width:0;opacity:0;background:#050505;transition:opacity .2s, width .2s;}
-#voGlaucoma{
-  background:
-    radial-gradient(circle at 50% 50%, transparent 34%, rgba(2,2,2,var(--gRing,0)) 66%),
-    radial-gradient(ellipse 46% 34% at 6% 40%, rgba(2,2,2,var(--g1,0)) 0%, rgba(2,2,2,0) 76%),
-    radial-gradient(ellipse 50% 30% at 52% 2%, rgba(2,2,2,var(--g2,0)) 0%, rgba(2,2,2,0) 78%),
-    radial-gradient(ellipse 44% 32% at 60% 100%, rgba(2,2,2,var(--g3,0)) 0%, rgba(2,2,2,0) 78%);
-}
 .vfloat{position:absolute;opacity:0;transition:opacity .2s, width .2s, height .2s;animation:vdrift 10s ease-in-out infinite;}
 .vfloat svg{width:100%;height:100%;display:block;overflow:visible;}
 .vfloat.fly{border-radius:50%;background:radial-gradient(circle at 35% 35%, rgba(18,16,12,0.7), rgba(18,16,12,0.32) 65%, rgba(18,16,12,0) 100%);filter:blur(.4px);}
@@ -219,6 +212,16 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
   <filter id="gcbFilter" color-interpolation-filters="sRGB">
     <feColorMatrix id="gcbMatrix" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
   </filter>
+  <filter id="ghostFilter" x="-30%" y="-30%" width="160%" height="160%">
+    <feOffset id="ghostOffset" in="SourceGraphic" dx="8" dy="4" result="ghost"/>
+    <feComponentTransfer in="ghost" result="ghostFaded">
+      <feFuncA id="ghostAlpha" type="linear" slope="0.4"/>
+    </feComponentTransfer>
+    <feMerge>
+      <feMergeNode in="SourceGraphic"/>
+      <feMergeNode in="ghostFaded"/>
+    </feMerge>
+  </filter>
 </svg>
 
 <div id="home" class="screen active">
@@ -271,34 +274,31 @@ var G={game:'items',d:'normal',s:1};
 var timerInt=null,tLeft=20;
 var curGroup='aging';
 var presbyopiaZoom=0.3;
-var amdFocus={x:0.5,y:0.5};
+var visFocus={x:0.5,y:0.5};
+var hemiSide='right';
+var DRAGGABLE_FOCUS=['amd','glaucoma','vf','glare'];
 
-/* ── VISION CONDITIONS (vision.html에서 이식) ── */
+/* ── VISION CONDITIONS (vision.html에서 이식, 게임용으로 일부 종류/강도 조정) ── */
 var VISION_AGING=[
   {id:'cataract',name:'백내장',group:'aging',
-    apply:function(t){var e=Math.pow(t,1.7);return{filter:'blur('+(1+6*e)+'px) contrast('+(100-55*e)+'%) saturate('+(100-40*e)+'%) sepia('+(12+28*e)+'%) brightness('+(100+3*t)+'%)',haze:e};}},
+    apply:function(t){var e=Math.pow(t,1.7);return{filter:'blur('+(0.3+7*e)+'px) contrast('+(100-55*e)+'%) saturate('+(100-40*e)+'%) sepia('+(4+34*e)+'%) brightness('+(100+3*t)+'%)',haze:e};}},
   {id:'glaucoma',name:'녹내장',group:'aging',
     apply:function(t){return{filter:'contrast('+(100+4*t)+'%)',glaucomaLoss:t};}},
   {id:'amd',name:'황반변성',group:'aging',
     apply:function(t){return{filter:'contrast('+(100-8*t)+'%) saturate('+(100-6*t)+'%)',central:t};}},
   {id:'diabetic',name:'당뇨망막병증',group:'aging',
-    apply:function(t){return{diabeticSpots:t,floaters:t*0.5};}},
+    apply:function(t){return{diabeticSpots:Math.min(1,t*1.15),floaters:Math.min(1,t*0.75)};}},
   {id:'presbyopia',name:'노안',group:'aging',
     apply:function(t){return{filter:'blur('+((1+5*t)*presbyopiaZoom)+'px) contrast('+(100-16*t*presbyopiaZoom)+'%)'};}},
-  {id:'rp',name:'망막색소변성증',group:'aging',
-    apply:function(t){return{filter:'brightness('+(100-22*t)+'%) contrast('+(100-10*t)+'%)',vignette:t*0.95,vignetteSoft:true,haze:t*0.32,glare:t*0.4};}},
   {id:'hemianopia',name:'반맹',group:'aging',
     apply:function(t){return{hemi:t};}},
   {id:'floaters_dz',name:'비문증',group:'aging',
-    apply:function(t){return{filter:'contrast('+(100+4*t)+'%)',floaters:t*1.15};}}
+    apply:function(t){return{filter:'contrast('+(100+4*t)+'%)',floaters:Math.min(1,t*1.5)};}}
 ];
 var VISION_GENERAL=[
-  {id:'va',name:'시력장애',group:'general',apply:function(t){return{filter:'blur('+(2+8*t)+'px) contrast('+(100-12*t)+'%)'};}},
-  {id:'vf',name:'시야장애',group:'general',apply:function(t){return{vignette:0.32+0.42*t,vignetteSoft:true};}},
-  {id:'tv',name:'터널시야',group:'general',apply:function(t){return{vignette:0.68+0.30*t,vignetteSoft:true};}},
-  {id:'diplopia',name:'복시장애',group:'general',apply:function(t){return{filter:'contrast('+(100-4*t)+'%) drop-shadow('+(4+t*10)+'px '+(2+t*4)+'px 0 rgba(0,0,0,'+(0.25+t*0.3)+'))'};}},
+  {id:'vf',name:'시야장애',group:'general',apply:function(t){return{vignette:0.10+0.62*t,vignetteSoft:true};}},
+  {id:'diplopia',name:'복시장애',group:'general',apply:function(t){return{filter:'contrast('+(100-4*t)+'%)',ghost:t};}},
   {id:'colorblind',name:'색각장애(적록색맹)',group:'general',apply:function(t){return{colorblind:t};}},
-  {id:'refractive',name:'굴절장애',group:'general',apply:function(t){return{filter:'blur('+(1+5*t)+'px)'};}},
   {id:'accommodative',name:'조절장애',group:'general',apply:function(t){return{filter:'blur('+(1+1.5*t)+'px) contrast('+(100-8*t)+'%)'};}},
   {id:'glare',name:'광각장애(눈부심)',group:'general',apply:function(t){return{filter:'brightness('+(100+4*t)+'%) contrast('+(100-6*t)+'%)',glare:t};}}
 ];
@@ -385,6 +385,8 @@ function visHintText(d){
     return '🤏 확대=가까이(흐림) · 축소=멀리(선명) · '+state;
   }
   if(d==='amd') return '👆 화면 터치 · 암점 위치 이동';
+  if(d==='glaucoma'||d==='vf'||d==='glare') return '👆 화면 터치 · 또렷하게 보이는 위치 이동';
+  if(d==='hemianopia') return '👆 화면 터치 · 탭한 쪽이 보이는 쪽으로 전환';
   if(d==='accommodative') return '🔄 자동 초점 흐림↔선명 반복';
   if(d==='normal') return '질환을 선택해 체험해보세요';
   return '✋ 화면을 눌러 체험해보세요';
@@ -466,6 +468,12 @@ function updateVisionOverlay(){
     if(m) m.setAttribute('values',cbMatrixValues(res.colorblind));
     baseFilter=(baseFilter==='none'?'':baseFilter+' ')+'url(#gcbFilter)';
   }
+  if(res.ghost){
+    var goff=document.getElementById('ghostOffset'), galpha=document.getElementById('ghostAlpha');
+    if(goff){ goff.setAttribute('dx',4+res.ghost*22); goff.setAttribute('dy',2+res.ghost*8); }
+    if(galpha) galpha.setAttribute('slope',0.15+res.ghost*0.6);
+    baseFilter=(baseFilter==='none'?'':baseFilter+' ')+'url(#ghostFilter)';
+  }
   if(target) target.style.filter=baseFilter;
 
   var vig=res.vignette||0;
@@ -475,21 +483,26 @@ function updateVisionOverlay(){
     if(vig>0){
       var inner=res.vignetteSoft?(50-vig*46):(46-vig*40);
       var softness=res.vignetteSoft?22:10;
-      ovV.style.background='radial-gradient(circle at 50% 50%, transparent '+Math.max(2,inner*0.4)+'%, rgba(0,0,0,'+(0.65+vig*0.32)+') '+(inner+softness)+'%)';
+      ovV.style.background='radial-gradient(circle at '+(visFocus.x*100)+'% '+(visFocus.y*100)+'%, transparent '+Math.max(2,inner*0.4)+'%, rgba(0,0,0,'+(0.65+vig*0.32)+') '+(inner+softness)+'%)';
     }
   }
 
   var hemi=res.hemi||0;
   var ovH=document.getElementById('voHemi');
-  if(ovH){ ovH.style.opacity=hemi>0?0.99:0; ovH.style.width=hemi>0?'50%':'0'; }
+  if(ovH){
+    ovH.style.opacity=hemi>0?0.99:0;
+    ovH.style.width=hemi>0?'50%':'0';
+    if(hemiSide==='right'){ ovH.style.left='auto'; ovH.style.right='0'; }
+    else { ovH.style.left='0'; ovH.style.right='auto'; }
+  }
 
   var central=res.central||0;
   var ovC=document.getElementById('voCentral');
   if(ovC){
     ovC.style.opacity=central>0?Math.min(0.97,0.24+central*0.7):0;
     ovC.style.width=(28+central*28)+'%';
-    ovC.style.left=(amdFocus.x*100)+'%';
-    ovC.style.top=(amdFocus.y*100)+'%';
+    ovC.style.left=(visFocus.x*100)+'%';
+    ovC.style.top=(visFocus.y*100)+'%';
     if(central>0){
       var coreStop=34+central*18, edgeStop=92-central*30;
       ovC.style.background='radial-gradient(circle, rgba(8,8,6,'+(0.92+central*0.06)+') '+coreStop+'%, rgba(8,8,6,'+(0.5+central*0.3)+') '+((coreStop+edgeStop)/2)+'%, rgba(8,8,6,0) '+edgeStop+'%)';
@@ -502,10 +515,14 @@ function updateVisionOverlay(){
   if(ovG){
     ovG.style.opacity=gloss>0?1:0;
     if(gloss>0){
-      ovG.style.setProperty('--gRing',Math.min(0.95,gloss*1.05));
-      ovG.style.setProperty('--g1',Math.min(0.5,Math.max(0,(gloss-0.1)*0.6)));
-      ovG.style.setProperty('--g2',Math.min(0.45,Math.max(0,(gloss-0.2)*0.55)));
-      ovG.style.setProperty('--g3',Math.min(0.45,Math.max(0,(gloss-0.3)*0.6)));
+      var fx=visFocus.x*100, fy=visFocus.y*100, dx=fx-50, dy=fy-50;
+      var gRing=Math.min(0.95,gloss*1.05), g1=Math.min(0.5,Math.max(0,(gloss-0.1)*0.6)),
+          g2=Math.min(0.45,Math.max(0,(gloss-0.2)*0.55)), g3=Math.min(0.45,Math.max(0,(gloss-0.3)*0.6));
+      ovG.style.background=
+        'radial-gradient(circle at '+fx+'% '+fy+'%, transparent 34%, rgba(2,2,2,'+gRing+') 66%),'+
+        'radial-gradient(ellipse 46% 34% at '+(6+dx)+'% '+(40+dy)+'%, rgba(2,2,2,'+g1+') 0%, rgba(2,2,2,0) 76%),'+
+        'radial-gradient(ellipse 50% 30% at '+(52+dx)+'% '+(2+dy)+'%, rgba(2,2,2,'+g2+') 0%, rgba(2,2,2,0) 78%),'+
+        'radial-gradient(ellipse 44% 32% at '+(60+dx)+'% '+(100+dy)+'%, rgba(2,2,2,'+g3+') 0%, rgba(2,2,2,0) 78%)';
     }
   }
 
@@ -562,24 +579,30 @@ function updateVisionOverlay(){
     var r=garea.getBoundingClientRect();
     return {x:Math.max(0.05,Math.min(0.95,(clientX-r.left)/r.width)), y:Math.max(0.05,Math.min(0.95,(clientY-r.top)/r.height))};
   }
-  var dragging=false, dragMoved=false, downX=0, downY=0;
+  var dragging=false, dragMoved=false, downX=0, downY=0, hemiTapped=false;
   garea.addEventListener('pointerdown',function(e){
-    if(G.d!=='amd') return;
+    if(G.d==='hemianopia'){
+      var f=toFrac(e.clientX,e.clientY);
+      hemiSide=(f.x<0.5)?'right':'left';
+      hemiTapped=true; updateVisionOverlay();
+      return;
+    }
+    if(DRAGGABLE_FOCUS.indexOf(G.d)<0) return;
     dragging=true; dragMoved=false; downX=e.clientX; downY=e.clientY;
-    amdFocus=toFrac(e.clientX,e.clientY); updateVisionOverlay();
+    visFocus=toFrac(e.clientX,e.clientY); updateVisionOverlay();
   });
   garea.addEventListener('pointermove',function(e){
-    if(G.d!=='amd'||!dragging) return;
+    if(DRAGGABLE_FOCUS.indexOf(G.d)<0||!dragging) return;
     if(Math.hypot(e.clientX-downX,e.clientY-downY)>8) dragMoved=true;
-    if(dragMoved){ amdFocus=toFrac(e.clientX,e.clientY); updateVisionOverlay(); }
+    if(dragMoved){ visFocus=toFrac(e.clientX,e.clientY); updateVisionOverlay(); }
   });
   ['pointerup','pointercancel','pointerleave'].forEach(function(ev){garea.addEventListener(ev,function(){dragging=false;});});
-  // 실제로 드래그(암점 이동)한 경우에만 뒤이어 발생하는 클릭/터치를 막아, 물건 찾기 등의 탭 동작과 충돌하지 않게 함
+  // 실제로 드래그(중심점 이동)했거나 반맹 화면을 탭한 경우에만 뒤이어 발생하는 클릭/터치를 막아, 물건 찾기 등의 탭 동작과 충돌하지 않게 함
   garea.addEventListener('click',function(e){
-    if(G.d==='amd' && dragMoved){ e.stopPropagation(); e.preventDefault(); dragMoved=false; }
+    if((dragMoved||hemiTapped) && (DRAGGABLE_FOCUS.indexOf(G.d)>=0||G.d==='hemianopia')){ e.stopPropagation(); e.preventDefault(); dragMoved=false; hemiTapped=false; }
   },true);
   garea.addEventListener('touchend',function(e){
-    if(G.d==='amd' && dragMoved){ e.stopPropagation(); e.preventDefault(); dragMoved=false; }
+    if((dragMoved||hemiTapped) && (DRAGGABLE_FOCUS.indexOf(G.d)>=0||G.d==='hemianopia')){ e.stopPropagation(); e.preventDefault(); dragMoved=false; hemiTapped=false; }
   },true);
 
   var startDist=0, startZoom=0.3;
@@ -610,7 +633,7 @@ function startGame(game){
 function exitGame(){stopTimer();stopFlash();stopFocusLagCycle();showScr('home');}
 function setD(d){
   G.d=d;renderChips();
-  amdFocus={x:0.5,y:0.5};presbyopiaZoom=0.3;
+  visFocus={x:0.5,y:0.5};presbyopiaZoom=0.3;hemiSide='right';
   stopTimer();stopFlash();tLeft=timeForGame(G.s);updTimer();updateVisionOverlay();startTimer();
 }
 function setS(s){
