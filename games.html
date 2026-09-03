@@ -63,7 +63,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 #visOverlay{position:absolute;inset:0;z-index:80;pointer-events:none;}
 .vov{position:absolute;inset:0;opacity:0;transition:opacity .2s;}
 #voHaze{background:rgba(230,222,200,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:opacity .2s, background .2s;}
-#voGlare{background:radial-gradient(circle at 50% 42%, rgba(255,252,235,.9), rgba(255,252,235,0) 62%);mix-blend-mode:screen;}
+#voGlare{mix-blend-mode:screen;}
 #voCentral{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46%;aspect-ratio:1/1;border-radius:50%;opacity:0;transition:opacity .2s, filter .2s, width .2s, background .2s;}
 #voHemi{position:absolute;top:0;bottom:0;right:0;left:auto;width:0;opacity:0;background:#050505;transition:opacity .2s, width .2s;}
 .vfloat{position:absolute;opacity:0;transition:opacity .2s, width .2s, height .2s;animation:vdrift 10s ease-in-out infinite;}
@@ -299,7 +299,7 @@ var VISION_AGING=[
 var VISION_GENERAL=[
   {id:'vf',name:'시야장애',group:'general',apply:function(t){return{vignette:0.10+0.62*t,vignetteSoft:true};}},
   {id:'diplopia',name:'복시장애',group:'general',apply:function(t){return{filter:'contrast('+(100-4*t)+'%)',ghost:t};}},
-  {id:'colorblind',name:'색각장애(적록색맹)',group:'general',apply:function(t){return{colorblind:t};}},
+  {id:'colorblind',name:'색각장애(적록색맹)',group:'general',apply:function(t){return{filter:'saturate('+(100-32*t)+'%) contrast('+(100+8*t)+'%)',colorblind:Math.min(1,t*1.25)};}},
   {id:'accommodative',name:'조절장애',group:'general',apply:function(t){return{filter:'blur('+(1+1.5*t)+'px) contrast('+(100-8*t)+'%)'};}},
   {id:'glare',name:'광각장애(눈부심)',group:'general',apply:function(t){return{filter:'brightness('+(100+4*t)+'%) contrast('+(100-6*t)+'%)',glare:t};}}
 ];
@@ -386,7 +386,8 @@ function visHintText(d){
     return '🤏 확대=가까이(흐림) · 축소=멀리(선명) · '+state;
   }
   if(d==='amd') return '👆 화면 터치 · 암점 위치 이동';
-  if(d==='glaucoma'||d==='vf'||d==='glare') return '👆 화면 터치 · 또렷하게 보이는 위치 이동';
+  if(d==='glaucoma'||d==='vf') return '👆 화면 터치 · 또렷하게 보이는 위치 이동';
+  if(d==='glare') return '👆 화면 터치 · 눈부신 위치 이동';
   if(d==='hemianopia') return '👆 화면 터치 · 탭한 쪽이 보이는 쪽으로 전환';
   if(d==='accommodative') return '🔄 자동 초점 흐림↔선명 반복';
   if(d==='normal') return '질환을 선택해 체험해보세요';
@@ -471,8 +472,8 @@ function updateVisionOverlay(){
   }
   if(res.ghost){
     var goff=document.getElementById('ghostOffset'), galpha=document.getElementById('ghostAlpha');
-    if(goff){ goff.setAttribute('dx',4+res.ghost*22); goff.setAttribute('dy',2+res.ghost*8); }
-    if(galpha) galpha.setAttribute('slope',0.15+res.ghost*0.6);
+    if(goff){ goff.setAttribute('dx',2+res.ghost*8); goff.setAttribute('dy',1+res.ghost*3); }
+    if(galpha) galpha.setAttribute('slope',0.2+res.ghost*0.6);
     baseFilter=(baseFilter==='none'?'':baseFilter+' ')+'url(#ghostFilter)';
   }
   if(target) target.style.filter=baseFilter;
@@ -537,7 +538,12 @@ function updateVisionOverlay(){
 
   var glare=res.glare||0;
   var ovGl=document.getElementById('voGlare');
-  if(ovGl) ovGl.style.opacity=glare>0?Math.min(0.85,glare*0.9):0;
+  if(ovGl){
+    ovGl.style.opacity=glare>0?Math.min(0.97,0.35+glare*0.75):0;
+    if(glare>0){
+      ovGl.style.background='radial-gradient(circle at '+(visFocus.x*100)+'% '+(visFocus.y*100)+'%, rgba(255,255,250,1) 0%, rgba(255,252,235,.95) '+(18+glare*10)+'%, rgba(255,252,235,0) '+(55+glare*15)+'%)';
+    }
+  }
 
   var fTotal=res.floaters||0;
   var floatersEl=document.getElementById('voFloaters');
@@ -808,21 +814,26 @@ var KIOSK_DRINKS={
 };
 var kioskState={screen:'start',drink:null,temp:null,size:null,shot:null,pay:null};
 var kWrap;
+var KIOSK_MISSIONS=[
+  {drink:'americano',temp:'hot',size:'tall',shot:'none',pay:'card'},
+  {drink:'cafelatte',temp:'ice',size:'grande',shot:'add',pay:'mobile'},
+  {drink:'greentea',temp:'hot',size:'tall',shot:'none',pay:'mobile'},
+  {drink:'chocolatte',temp:'ice',size:'tall',shot:'none',pay:'card'},
+  {drink:'milktea',temp:'hot',size:'grande',shot:'none',pay:'card'},
+  {drink:'lemonade',temp:'ice',size:'grande',shot:'none',pay:'mobile'},
+  {drink:'americano',temp:'ice',size:'grande',shot:'add',pay:'mobile'},
+  {drink:'cafelatte',temp:'hot',size:'tall',shot:'none',pay:'card'}
+];
+var kioskMissionIdx=Math.floor(Math.random()*KIOSK_MISSIONS.length);
 var KIOSK_MISSION=null;
 function pickKioskMission(){
-  var keys=Object.keys(KIOSK_DRINKS);
-  var key=keys[Math.floor(Math.random()*keys.length)];
-  var d=KIOSK_DRINKS[key];
-  KIOSK_MISSION={
-    drink:key,
-    temp:d.iceOnly?'ice':(Math.random()<0.5?'ice':'hot'),
-    size:Math.random()<0.5?'tall':'grande',
-    shot:Math.random()<0.5?'none':'add'
-  };
+  KIOSK_MISSION=KIOSK_MISSIONS[kioskMissionIdx%KIOSK_MISSIONS.length];
+  kioskMissionIdx++;
 }
+function kioskPayText(pay){ return pay==='card'?'신용카드':'모바일 페이'; }
 function kioskMissionText(){
   if(!KIOSK_MISSION) return '';
-  return KIOSK_DRINKS[KIOSK_MISSION.drink].name+' '+kioskOptText(KIOSK_MISSION);
+  return KIOSK_DRINKS[KIOSK_MISSION.drink].name+' '+kioskOptText(KIOSK_MISSION)+', '+kioskPayText(KIOSK_MISSION.pay)+' 결제';
 }
 
 function buildKiosk(area){
@@ -970,11 +981,11 @@ function renderKioskScreen(){
     var ok=document.createElement('button');ok.className='kiosk-btn-confirm';ok.style.flex='1';ok.textContent='확인 (DONE)';
     ok.onclick=function(){
       var m=KIOSK_MISSION;
-      var match=m && st.drink===m.drink && st.temp===m.temp && st.size===m.size && st.shot===m.shot;
+      var match=m && st.drink===m.drink && st.temp===m.temp && st.size===m.size && st.shot===m.shot && st.pay===m.pay;
       if(match){ showOK(d.name+' 주문을 정확히 완료했습니다!'); }
       else{
         stopTimer();stopFlash();
-        showModal('tout','🔁','목표와 다른 주문이에요','목표: '+kioskMissionText()+'<br>실제 주문: '+d.name+' ('+kioskOptText(st)+')<br>다시 도전해보세요!');
+        showModal('tout','🔁','목표와 다른 주문이에요','목표: '+kioskMissionText()+'<br>실제 주문: '+d.name+' ('+kioskOptText(st)+', '+kioskPayText(st.pay)+' 결제)<br>다시 도전해보세요!');
       }
     };
     row.appendChild(ok);
