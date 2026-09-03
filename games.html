@@ -148,6 +148,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 .kiosk-wrap{position:relative;width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column;background:#f5ead9;}
 .kiosk-content{flex:1;overflow-y:auto;padding:20px 16px 28px;display:flex;flex-direction:column;gap:16px;}
 .kiosk-title{font-size:22px;font-weight:900;color:#7c2d12;text-align:center;text-shadow:1px 1px 0 #fde68a;margin-bottom:4px;}
+.kiosk-mission-bar{background:#1e293b;color:#fbbf24;font-size:14px;font-weight:800;text-align:center;padding:10px;border-radius:12px;}
 .kiosk-drink-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .kiosk-drink-btn{background:#fff;border:3px solid #d6c3a1;border-radius:18px;padding:18px 10px;text-align:center;cursor:pointer;transition:transform .12s;}
 .kiosk-drink-btn:active{transform:scale(.95);}
@@ -608,7 +609,7 @@ function updateVisionOverlay(){
   var startDist=0, startZoom=0.3;
   function touchDist(t){return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);}
   garea.addEventListener('touchstart',function(e){
-    if(e.touches.length===2){ startDist=touchDist(e.touches); startZoom=presbyopiaZoom; }
+    if(e.touches.length>=2){ multiTouchActive=true; startDist=touchDist(e.touches); startZoom=presbyopiaZoom; }
   },{passive:true});
   garea.addEventListener('touchmove',function(e){
     if(e.touches.length===2 && G.d==='presbyopia'){
@@ -618,6 +619,14 @@ function updateVisionOverlay(){
       updateVisionOverlay();
     }
   },{passive:false});
+  // 두 손가락(핀치줌) 동작 중이었다면, 손가락을 뗄 때 발생하는 탭이 물건 찾기 등의 선택으로 이어지지 않게 막음
+  var multiTouchActive=false;
+  garea.addEventListener('touchend',function(e){
+    if(multiTouchActive){
+      e.stopPropagation(); e.preventDefault();
+      if(e.touches.length===0) multiTouchActive=false;
+    }
+  },true);
 })();
 
 function timeForGame(s){ if(G.game==='items') return 30; if(G.game==='kiosk') return 40; if(G.game==='subway') return 35; return [20,18,15][s-1]; }
@@ -799,9 +808,26 @@ var KIOSK_DRINKS={
 };
 var kioskState={screen:'start',drink:null,temp:null,size:null,shot:null,pay:null};
 var kWrap;
+var KIOSK_MISSION=null;
+function pickKioskMission(){
+  var keys=Object.keys(KIOSK_DRINKS);
+  var key=keys[Math.floor(Math.random()*keys.length)];
+  var d=KIOSK_DRINKS[key];
+  KIOSK_MISSION={
+    drink:key,
+    temp:d.iceOnly?'ice':(Math.random()<0.5?'ice':'hot'),
+    size:Math.random()<0.5?'tall':'grande',
+    shot:Math.random()<0.5?'none':'add'
+  };
+}
+function kioskMissionText(){
+  if(!KIOSK_MISSION) return '';
+  return KIOSK_DRINKS[KIOSK_MISSION.drink].name+' '+kioskOptText(KIOSK_MISSION);
+}
 
 function buildKiosk(area){
   kioskState={screen:'start',drink:null,temp:null,size:null,shot:null,pay:null};
+  pickKioskMission();
   kWrap=document.createElement('div');kWrap.className='kiosk-wrap';
   var content=document.createElement('div');content.className='kiosk-content';content.id='kiosk-content';
   kWrap.appendChild(content);
@@ -832,6 +858,12 @@ function renderKioskScreen(){
   var c=document.getElementById('kiosk-content');if(!c)return;
   c.innerHTML='';
   var st=kioskState;
+
+  if(st.screen!=='done'){
+    var mission=document.createElement('div'); mission.className='kiosk-mission-bar';
+    mission.innerHTML='🎯 주문할 메뉴: <b>'+kioskMissionText()+'</b>';
+    c.appendChild(mission);
+  }
 
   if(st.screen==='start'){
     var t=document.createElement('div');t.className='kiosk-title';t.textContent='☕ 맛있는 커피나라';c.appendChild(t);
@@ -936,7 +968,15 @@ function renderKioskScreen(){
     c.appendChild(rc);
     var row=document.createElement('div');row.className='kiosk-back-row';
     var ok=document.createElement('button');ok.className='kiosk-btn-confirm';ok.style.flex='1';ok.textContent='확인 (DONE)';
-    ok.onclick=function(){ showOK(d.name+' 주문을 완료했습니다!'); };
+    ok.onclick=function(){
+      var m=KIOSK_MISSION;
+      var match=m && st.drink===m.drink && st.temp===m.temp && st.size===m.size && st.shot===m.shot;
+      if(match){ showOK(d.name+' 주문을 정확히 완료했습니다!'); }
+      else{
+        stopTimer();stopFlash();
+        showModal('tout','🔁','목표와 다른 주문이에요','목표: '+kioskMissionText()+'<br>실제 주문: '+d.name+' ('+kioskOptText(st)+')<br>다시 도전해보세요!');
+      }
+    };
     row.appendChild(ok);
     c.appendChild(row);
   }
@@ -1060,6 +1100,13 @@ function renderSubwayScreen(){
       drawSubwayMap();
       buildVisionOverlay(mapArea);
 
+      var subTapStartX=0, subTapStartY=0, subTapMoved=false;
+      subMapCvs.addEventListener('touchstart', function(e){
+        subTapStartX=e.touches[0].clientX; subTapStartY=e.touches[0].clientY; subTapMoved=false;
+      },{passive:true});
+      subMapCvs.addEventListener('touchmove', function(e){
+        if(Math.hypot(e.touches[0].clientX-subTapStartX,e.touches[0].clientY-subTapStartY)>14) subTapMoved=true;
+      },{passive:true});
       subMapCvs.addEventListener('click', function(e){
         var r=subMapCvs.getBoundingClientRect();
         var sx=subMapCvs.width/r.width, sy=subMapCvs.height/r.height;
@@ -1067,6 +1114,7 @@ function renderSubwayScreen(){
       });
       subMapCvs.addEventListener('touchend', function(e){
         e.preventDefault();
+        if(subTapMoved) return; // 노선도를 둘러보려고 손가락을 움직인 것이므로 탭으로 처리하지 않음
         var r=subMapCvs.getBoundingClientRect();
         var sx=subMapCvs.width/r.width, sy=subMapCvs.height/r.height;
         tapSubwayStation((e.changedTouches[0].clientX-r.left)*sx, (e.changedTouches[0].clientY-r.top)*sy);
