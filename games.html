@@ -63,7 +63,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 #visOverlay{position:absolute;inset:0;z-index:80;pointer-events:none;}
 .vov{position:absolute;inset:0;opacity:0;transition:opacity .2s;}
 #voHaze{background:rgba(230,222,200,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:opacity .2s, background .2s;}
-#voGlare{background:radial-gradient(circle at 50% 42%, rgba(255,252,235,.9), rgba(255,252,235,0) 62%);mix-blend-mode:screen;}
+#voGlare{mix-blend-mode:screen;}
 #voCentral{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46%;aspect-ratio:1/1;border-radius:50%;opacity:0;transition:opacity .2s, filter .2s, width .2s, background .2s;}
 #voHemi{position:absolute;top:0;bottom:0;right:0;left:auto;width:0;opacity:0;background:#050505;transition:opacity .2s, width .2s;}
 .vfloat{position:absolute;opacity:0;transition:opacity .2s, width .2s, height .2s;animation:vdrift 10s ease-in-out infinite;}
@@ -148,6 +148,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 .kiosk-wrap{position:relative;width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column;background:#f5ead9;}
 .kiosk-content{flex:1;overflow-y:auto;padding:20px 16px 28px;display:flex;flex-direction:column;gap:16px;}
 .kiosk-title{font-size:22px;font-weight:900;color:#7c2d12;text-align:center;text-shadow:1px 1px 0 #fde68a;margin-bottom:4px;}
+.kiosk-mission-bar{background:#1e293b;color:#fbbf24;font-size:14px;font-weight:800;text-align:center;padding:10px;border-radius:12px;}
 .kiosk-drink-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .kiosk-drink-btn{background:#fff;border:3px solid #d6c3a1;border-radius:18px;padding:18px 10px;text-align:center;cursor:pointer;transition:transform .12s;}
 .kiosk-drink-btn:active{transform:scale(.95);}
@@ -298,7 +299,7 @@ var VISION_AGING=[
 var VISION_GENERAL=[
   {id:'vf',name:'시야장애',group:'general',apply:function(t){return{vignette:0.10+0.62*t,vignetteSoft:true};}},
   {id:'diplopia',name:'복시장애',group:'general',apply:function(t){return{filter:'contrast('+(100-4*t)+'%)',ghost:t};}},
-  {id:'colorblind',name:'색각장애(적록색맹)',group:'general',apply:function(t){return{colorblind:t};}},
+  {id:'colorblind',name:'색각장애(적록색맹)',group:'general',apply:function(t){return{filter:'saturate('+(100-32*t)+'%) contrast('+(100+8*t)+'%)',colorblind:Math.min(1,t*1.25)};}},
   {id:'accommodative',name:'조절장애',group:'general',apply:function(t){return{filter:'blur('+(1+1.5*t)+'px) contrast('+(100-8*t)+'%)'};}},
   {id:'glare',name:'광각장애(눈부심)',group:'general',apply:function(t){return{filter:'brightness('+(100+4*t)+'%) contrast('+(100-6*t)+'%)',glare:t};}}
 ];
@@ -385,7 +386,8 @@ function visHintText(d){
     return '🤏 확대=가까이(흐림) · 축소=멀리(선명) · '+state;
   }
   if(d==='amd') return '👆 화면 터치 · 암점 위치 이동';
-  if(d==='glaucoma'||d==='vf'||d==='glare') return '👆 화면 터치 · 또렷하게 보이는 위치 이동';
+  if(d==='glaucoma'||d==='vf') return '👆 화면 터치 · 또렷하게 보이는 위치 이동';
+  if(d==='glare') return '👆 화면 터치 · 눈부신 위치 이동';
   if(d==='hemianopia') return '👆 화면 터치 · 탭한 쪽이 보이는 쪽으로 전환';
   if(d==='accommodative') return '🔄 자동 초점 흐림↔선명 반복';
   if(d==='normal') return '질환을 선택해 체험해보세요';
@@ -470,8 +472,8 @@ function updateVisionOverlay(){
   }
   if(res.ghost){
     var goff=document.getElementById('ghostOffset'), galpha=document.getElementById('ghostAlpha');
-    if(goff){ goff.setAttribute('dx',4+res.ghost*22); goff.setAttribute('dy',2+res.ghost*8); }
-    if(galpha) galpha.setAttribute('slope',0.15+res.ghost*0.6);
+    if(goff){ goff.setAttribute('dx',2+res.ghost*8); goff.setAttribute('dy',1+res.ghost*3); }
+    if(galpha) galpha.setAttribute('slope',0.2+res.ghost*0.6);
     baseFilter=(baseFilter==='none'?'':baseFilter+' ')+'url(#ghostFilter)';
   }
   if(target) target.style.filter=baseFilter;
@@ -536,7 +538,12 @@ function updateVisionOverlay(){
 
   var glare=res.glare||0;
   var ovGl=document.getElementById('voGlare');
-  if(ovGl) ovGl.style.opacity=glare>0?Math.min(0.85,glare*0.9):0;
+  if(ovGl){
+    ovGl.style.opacity=glare>0?Math.min(0.97,0.35+glare*0.75):0;
+    if(glare>0){
+      ovGl.style.background='radial-gradient(circle at '+(visFocus.x*100)+'% '+(visFocus.y*100)+'%, rgba(255,255,250,1) 0%, rgba(255,252,235,.95) '+(18+glare*10)+'%, rgba(255,252,235,0) '+(55+glare*15)+'%)';
+    }
+  }
 
   var fTotal=res.floaters||0;
   var floatersEl=document.getElementById('voFloaters');
@@ -608,7 +615,7 @@ function updateVisionOverlay(){
   var startDist=0, startZoom=0.3;
   function touchDist(t){return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);}
   garea.addEventListener('touchstart',function(e){
-    if(e.touches.length===2){ startDist=touchDist(e.touches); startZoom=presbyopiaZoom; }
+    if(e.touches.length>=2){ multiTouchActive=true; startDist=touchDist(e.touches); startZoom=presbyopiaZoom; }
   },{passive:true});
   garea.addEventListener('touchmove',function(e){
     if(e.touches.length===2 && G.d==='presbyopia'){
@@ -618,6 +625,14 @@ function updateVisionOverlay(){
       updateVisionOverlay();
     }
   },{passive:false});
+  // 두 손가락(핀치줌) 동작 중이었다면, 손가락을 뗄 때 발생하는 탭이 물건 찾기 등의 선택으로 이어지지 않게 막음
+  var multiTouchActive=false;
+  garea.addEventListener('touchend',function(e){
+    if(multiTouchActive){
+      e.stopPropagation(); e.preventDefault();
+      if(e.touches.length===0) multiTouchActive=false;
+    }
+  },true);
 })();
 
 function timeForGame(s){ if(G.game==='items') return 30; if(G.game==='kiosk') return 40; if(G.game==='subway') return 35; return [20,18,15][s-1]; }
@@ -799,9 +814,31 @@ var KIOSK_DRINKS={
 };
 var kioskState={screen:'start',drink:null,temp:null,size:null,shot:null,pay:null};
 var kWrap;
+var KIOSK_MISSIONS=[
+  {drink:'americano',temp:'hot',size:'tall',shot:'none',pay:'card'},
+  {drink:'cafelatte',temp:'ice',size:'grande',shot:'add',pay:'mobile'},
+  {drink:'greentea',temp:'hot',size:'tall',shot:'none',pay:'mobile'},
+  {drink:'chocolatte',temp:'ice',size:'tall',shot:'none',pay:'card'},
+  {drink:'milktea',temp:'hot',size:'grande',shot:'none',pay:'card'},
+  {drink:'lemonade',temp:'ice',size:'grande',shot:'none',pay:'mobile'},
+  {drink:'americano',temp:'ice',size:'grande',shot:'add',pay:'mobile'},
+  {drink:'cafelatte',temp:'hot',size:'tall',shot:'none',pay:'card'}
+];
+var kioskMissionIdx=Math.floor(Math.random()*KIOSK_MISSIONS.length);
+var KIOSK_MISSION=null;
+function pickKioskMission(){
+  KIOSK_MISSION=KIOSK_MISSIONS[kioskMissionIdx%KIOSK_MISSIONS.length];
+  kioskMissionIdx++;
+}
+function kioskPayText(pay){ return pay==='card'?'신용카드':'모바일 페이'; }
+function kioskMissionText(){
+  if(!KIOSK_MISSION) return '';
+  return KIOSK_DRINKS[KIOSK_MISSION.drink].name+' '+kioskOptText(KIOSK_MISSION)+', '+kioskPayText(KIOSK_MISSION.pay)+' 결제';
+}
 
 function buildKiosk(area){
   kioskState={screen:'start',drink:null,temp:null,size:null,shot:null,pay:null};
+  pickKioskMission();
   kWrap=document.createElement('div');kWrap.className='kiosk-wrap';
   var content=document.createElement('div');content.className='kiosk-content';content.id='kiosk-content';
   kWrap.appendChild(content);
@@ -832,6 +869,12 @@ function renderKioskScreen(){
   var c=document.getElementById('kiosk-content');if(!c)return;
   c.innerHTML='';
   var st=kioskState;
+
+  if(st.screen!=='done'){
+    var mission=document.createElement('div'); mission.className='kiosk-mission-bar';
+    mission.innerHTML='🎯 주문할 메뉴: <b>'+kioskMissionText()+'</b>';
+    c.appendChild(mission);
+  }
 
   if(st.screen==='start'){
     var t=document.createElement('div');t.className='kiosk-title';t.textContent='☕ 맛있는 커피나라';c.appendChild(t);
@@ -936,7 +979,15 @@ function renderKioskScreen(){
     c.appendChild(rc);
     var row=document.createElement('div');row.className='kiosk-back-row';
     var ok=document.createElement('button');ok.className='kiosk-btn-confirm';ok.style.flex='1';ok.textContent='확인 (DONE)';
-    ok.onclick=function(){ showOK(d.name+' 주문을 완료했습니다!'); };
+    ok.onclick=function(){
+      var m=KIOSK_MISSION;
+      var match=m && st.drink===m.drink && st.temp===m.temp && st.size===m.size && st.shot===m.shot && st.pay===m.pay;
+      if(match){ showOK(d.name+' 주문을 정확히 완료했습니다!'); }
+      else{
+        stopTimer();stopFlash();
+        showModal('tout','🔁','목표와 다른 주문이에요','목표: '+kioskMissionText()+'<br>실제 주문: '+d.name+' ('+kioskOptText(st)+', '+kioskPayText(st.pay)+' 결제)<br>다시 도전해보세요!');
+      }
+    };
     row.appendChild(ok);
     c.appendChild(row);
   }
@@ -1060,6 +1111,13 @@ function renderSubwayScreen(){
       drawSubwayMap();
       buildVisionOverlay(mapArea);
 
+      var subTapStartX=0, subTapStartY=0, subTapMoved=false;
+      subMapCvs.addEventListener('touchstart', function(e){
+        subTapStartX=e.touches[0].clientX; subTapStartY=e.touches[0].clientY; subTapMoved=false;
+      },{passive:true});
+      subMapCvs.addEventListener('touchmove', function(e){
+        if(Math.hypot(e.touches[0].clientX-subTapStartX,e.touches[0].clientY-subTapStartY)>14) subTapMoved=true;
+      },{passive:true});
       subMapCvs.addEventListener('click', function(e){
         var r=subMapCvs.getBoundingClientRect();
         var sx=subMapCvs.width/r.width, sy=subMapCvs.height/r.height;
@@ -1067,6 +1125,7 @@ function renderSubwayScreen(){
       });
       subMapCvs.addEventListener('touchend', function(e){
         e.preventDefault();
+        if(subTapMoved) return; // 노선도를 둘러보려고 손가락을 움직인 것이므로 탭으로 처리하지 않음
         var r=subMapCvs.getBoundingClientRect();
         var sx=subMapCvs.width/r.width, sy=subMapCvs.height/r.height;
         tapSubwayStation((e.changedTouches[0].clientX-r.left)*sx, (e.changedTouches[0].clientY-r.top)*sy);
