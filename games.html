@@ -145,10 +145,11 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 #iCvs{display:block;touch-action:none;}
 .items-bar{background:rgba(15,23,42,.95);padding:13px 16px;display:flex;align-items:center;gap:10px;border-top:2px solid #334155;flex-shrink:0;}
 /* kiosk order game */
-.kiosk-wrap{position:relative;width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column;background:#f5ead9;}
+.kiosk-outer{width:100%;height:100%;display:flex;flex-direction:column;}
+.kiosk-wrap{position:relative;width:100%;flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;background:#f5ead9;}
 .kiosk-content{flex:1;overflow-y:auto;padding:20px 16px 28px;display:flex;flex-direction:column;gap:16px;}
 .kiosk-title{font-size:22px;font-weight:900;color:#7c2d12;text-align:center;text-shadow:1px 1px 0 #fde68a;margin-bottom:4px;}
-.kiosk-mission-bar{background:#1e293b;color:#fbbf24;font-size:14px;font-weight:800;text-align:center;padding:10px;border-radius:12px;}
+.kiosk-mission-bar{background:#1e293b;color:#fbbf24;font-size:14px;font-weight:800;text-align:center;padding:10px 12px;flex-shrink:0;line-height:1.5;}
 .kiosk-drink-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .kiosk-drink-btn{background:#fff;border:3px solid #d6c3a1;border-radius:18px;padding:18px 10px;text-align:center;cursor:pointer;transition:transform .12s;}
 .kiosk-drink-btn:active{transform:scale(.95);}
@@ -210,9 +211,6 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute">
-  <filter id="gcbFilter" color-interpolation-filters="sRGB">
-    <feColorMatrix id="gcbMatrix" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
-  </filter>
   <filter id="ghostFilter" x="-30%" y="-30%" width="160%" height="160%">
     <feOffset id="ghostOffset" in="SourceGraphic" dx="8" dy="4" result="ghost"/>
     <feComponentTransfer in="ghost" result="ghostFaded">
@@ -299,7 +297,7 @@ var VISION_AGING=[
 var VISION_GENERAL=[
   {id:'vf',name:'시야장애',group:'general',apply:function(t){return{vignette:0.10+0.62*t,vignetteSoft:true};}},
   {id:'diplopia',name:'복시장애',group:'general',apply:function(t){return{filter:'contrast('+(100-4*t)+'%)',ghost:t};}},
-  {id:'colorblind',name:'색각장애(적록색맹)',group:'general',apply:function(t){return{filter:'saturate('+(100-32*t)+'%) contrast('+(100+8*t)+'%)',colorblind:Math.min(1,t*1.25)};}},
+  {id:'colorblind',name:'색각장애(적록색맹)',group:'general',apply:function(t){return{filter:'sepia('+(16*t)+'%) saturate('+(100-55*t)+'%) hue-rotate(-'+(9*t)+'deg) contrast('+(100+5*t)+'%)'};}},
   {id:'accommodative',name:'조절장애',group:'general',apply:function(t){return{filter:'blur('+(1+1.5*t)+'px) contrast('+(100-8*t)+'%)'};}},
   {id:'glare',name:'광각장애(눈부심)',group:'general',apply:function(t){return{filter:'brightness('+(100+4*t)+'%) contrast('+(100-6*t)+'%)',glare:t};}}
 ];
@@ -307,12 +305,6 @@ var VISION_CONDITIONS=[{id:'normal',name:'정상',group:'both',apply:function(){
 var VISION_MAP={}; VISION_CONDITIONS.forEach(function(c){VISION_MAP[c.id]=c;});
 var STAGE_T=[0.30,0.62,0.94];
 
-var IDENTITY_3=[1,0,0, 0,1,0, 0,0,1];
-var PROTANOPIA_3=[0.152,1.053,-0.205, 0.115,0.786,0.099, -0.004,-0.048,1.052];
-function cbMatrixValues(t){
-  var m=IDENTITY_3.map(function(v,i){return v+(PROTANOPIA_3[i]-v)*t;});
-  return m[0]+' '+m[1]+' '+m[2]+' 0 0  '+m[3]+' '+m[4]+' '+m[5]+' 0 0  '+m[6]+' '+m[7]+' '+m[8]+' 0 0  0 0 0 1 0';
-}
 
 /* 비문증/당뇨망막병증 부유물·반점 위치 데이터 (vision.html에서 이식) */
 var VISION_THREAD_SPOTS=[
@@ -465,12 +457,9 @@ function updateVisionOverlay(){
   var res=(cond.id==='normal')?{}:(cond.apply(t)||{});
 
   var baseFilter=res.filter||'none';
-  if(res.colorblind){
-    var m=document.getElementById('gcbMatrix');
-    if(m) m.setAttribute('values',cbMatrixValues(res.colorblind));
-    baseFilter=(baseFilter==='none'?'':baseFilter+' ')+'url(#gcbFilter)';
-  }
-  if(res.ghost){
+  // 복시장애(겹쳐보임)는 캔버스가 낀 화면(물건찾기/지하철)에서 일부 브라우저가 SVG 필터를
+  // 캔버스 자손까지 제대로 적용하지 못해, 그 경우엔 캔버스에 직접 유령상을 그리는 방식으로 대신 처리한다.
+  if(res.ghost && G.game==='kiosk'){
     var goff=document.getElementById('ghostOffset'), galpha=document.getElementById('ghostAlpha');
     if(goff){ goff.setAttribute('dx',2+res.ghost*8); goff.setAttribute('dy',1+res.ghost*3); }
     if(galpha) galpha.setAttribute('slope',0.2+res.ghost*0.6);
@@ -576,6 +565,30 @@ function updateVisionOverlay(){
   }
 
   if(cond.id==='accommodative') startFocusLagCycle(); else stopFocusLagCycle();
+
+  // 복시장애의 캔버스 유령상은 실제로 캔버스를 다시 그려야 반영되므로,
+  // 질환/단계가 바뀔 때도 해당 캔버스를 다시 그려서 즉시 반영되게 함(복시장애일 때만, 불필요한 재그리기 방지)
+  if(cond.id==='diplopia'){
+    if(G.game==='items' && iCtx) drawItems();
+    if(G.game==='subway' && subMapCtx) drawSubwayMap();
+  }
+}
+
+// 복시장애(겹쳐보임)를 캔버스에 직접 그림 - 물건찾기/지하철처럼 캔버스가 낀 화면은
+// 일부 브라우저에서 부모에 건 SVG 필터가 캔버스 자손까지 적용되지 않는 경우가 있어,
+// 그 화면들은 SVG 필터 대신 캔버스 픽셀에 직접 유령상을 겹쳐 그려서 항상 보이게 한다.
+function drawCanvasGhost(ctx,canvas){
+  if(G.d!=='diplopia') return;
+  var t=STAGE_T[G.s-1];
+  var rect=canvas.getBoundingClientRect();
+  var scale=rect.width?canvas.width/rect.width:1;
+  var dx=(2+t*8)*scale, dy=(1+t*3)*scale;
+  var tmp=document.createElement('canvas'); tmp.width=canvas.width; tmp.height=canvas.height;
+  tmp.getContext('2d').drawImage(canvas,0,0);
+  ctx.save();
+  ctx.globalAlpha=Math.min(0.7,0.2+t*0.55);
+  ctx.drawImage(tmp,dx,dy);
+  ctx.restore();
 }
 
 /* AMD 암점 드래그 이동 + 노안 핀치줌 (모든 게임 공통, #garea에 한 번만 연결) */
@@ -761,6 +774,8 @@ function drawItems(){
     ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('✓',x,y);
     ctx.restore();
   });
+
+  drawCanvasGhost(ctx,iCvs);
 }
 
 function tapItems(tx,ty){
@@ -839,10 +854,15 @@ function kioskMissionText(){
 function buildKiosk(area){
   kioskState={screen:'start',drink:null,temp:null,size:null,shot:null,pay:null};
   pickKioskMission();
+  var outer=document.createElement('div'); outer.className='kiosk-outer';
+  var mission=document.createElement('div'); mission.className='kiosk-mission-bar';
+  mission.innerHTML='🎯 주문할 메뉴: <b>'+kioskMissionText()+'</b>';
+  outer.appendChild(mission);
   kWrap=document.createElement('div');kWrap.className='kiosk-wrap';
   var content=document.createElement('div');content.className='kiosk-content';content.id='kiosk-content';
   kWrap.appendChild(content);
-  area.appendChild(kWrap);
+  outer.appendChild(kWrap);
+  area.appendChild(outer);
 
   requestAnimationFrame(function(){
     renderKioskScreen();
@@ -860,8 +880,7 @@ function kioskPrice(st){
   return p;
 }
 function kioskOptText(st){
-  var parts=[st.temp==='ice'?'ICE':'HOT', st.size==='grande'?'그란데':'톨'];
-  if(st.shot==='add') parts.push('샷 추가');
+  var parts=[st.temp==='ice'?'ICE':'HOT', st.size==='grande'?'그란데':'톨', st.shot==='add'?'샷 추가':'샷 추가 안함'];
   return parts.join(', ');
 }
 
@@ -869,12 +888,6 @@ function renderKioskScreen(){
   var c=document.getElementById('kiosk-content');if(!c)return;
   c.innerHTML='';
   var st=kioskState;
-
-  if(st.screen!=='done'){
-    var mission=document.createElement('div'); mission.className='kiosk-mission-bar';
-    mission.innerHTML='🎯 주문할 메뉴: <b>'+kioskMissionText()+'</b>';
-    c.appendChild(mission);
-  }
 
   if(st.screen==='start'){
     var t=document.createElement('div');t.className='kiosk-title';t.textContent='☕ 맛있는 커피나라';c.appendChild(t);
@@ -968,25 +981,31 @@ function renderKioskScreen(){
   else if(st.screen==='done'){
     var d=KIOSK_DRINKS[st.drink];
     var price=kioskPrice(st);
-    var t=document.createElement('div');t.className='kiosk-done-title';t.textContent='🎉 주문 완료!';c.appendChild(t);
+    var m=KIOSK_MISSION;
+    var match=m && st.drink===m.drink && st.temp===m.temp && st.size===m.size && st.shot===m.shot && st.pay===m.pay;
+    var t=document.createElement('div');t.className='kiosk-done-title';
+    t.textContent=match?'🎉 주문 완료!':'❌ 목표와 다른 주문이에요';
+    if(!match) t.style.color='#b91c1c';
+    c.appendChild(t);
     var rc=document.createElement('div');rc.className='kiosk-receipt';
     var orderNo=1000+Math.floor(Math.random()*9000);
     rc.innerHTML='<div class="kiosk-receipt-title">영수증</div>'+
       '<div class="kiosk-receipt-row"><span>주문 번호</span><span>'+orderNo+'</span></div>'+
       '<div class="kiosk-receipt-row"><span>메뉴</span><span>'+d.name+' ('+kioskOptText(st)+') 1개</span></div>'+
+      '<div class="kiosk-receipt-row"><span>결제수단</span><span>'+kioskPayText(st.pay)+'</span></div>'+
       '<div class="kiosk-receipt-total"><span>총 가격</span><span>'+price.toLocaleString()+'원</span></div>'+
       '<div style="text-align:center;font-size:40px;margin-top:14px;">'+d.emoji+'</div>';
     c.appendChild(rc);
+    if(!match){
+      var warn=document.createElement('div'); warn.style.cssText='background:#fef2f2;border:2px solid #fca5a5;border-radius:12px;padding:10px 12px;color:#b91c1c;font-size:13px;font-weight:700;text-align:center;';
+      warn.textContent='목표: '+kioskMissionText();
+      c.appendChild(warn);
+    }
     var row=document.createElement('div');row.className='kiosk-back-row';
-    var ok=document.createElement('button');ok.className='kiosk-btn-confirm';ok.style.flex='1';ok.textContent='확인 (DONE)';
+    var ok=document.createElement('button');ok.className='kiosk-btn-confirm';ok.style.flex='1';ok.textContent=match?'확인 (DONE)':'다시 도전';
     ok.onclick=function(){
-      var m=KIOSK_MISSION;
-      var match=m && st.drink===m.drink && st.temp===m.temp && st.size===m.size && st.shot===m.shot && st.pay===m.pay;
       if(match){ showOK(d.name+' 주문을 정확히 완료했습니다!'); }
-      else{
-        stopTimer();stopFlash();
-        showModal('tout','🔁','목표와 다른 주문이에요','목표: '+kioskMissionText()+'<br>실제 주문: '+d.name+' ('+kioskOptText(st)+', '+kioskPayText(st.pay)+' 결제)<br>다시 도전해보세요!');
-      }
+      else{ restart(); }
     };
     row.appendChild(ok);
     c.appendChild(row);
@@ -1171,7 +1190,7 @@ function updSubwayStatus(){
   var stations=roundStations(rd), labels=roundLabels(rd);
   if(st.step<stations.length){
     var s=stations[st.step];
-    el.textContent='🔎 지금 찾을 역: '+labels[st.step]+' '+s.name+' ('+s.line+')';
+    el.innerHTML='🔎 지금 찾을 역: '+labels[st.step]+' '+s.name+' (<span style="background:'+subwayLineColor(s.line)+';color:#fff;padding:1px 8px;border-radius:8px;">'+s.line+'</span>)';
   } else {
     el.textContent='✅ 모든 역을 찾았습니다!';
   }
@@ -1226,6 +1245,8 @@ function drawSubwayMap(){
     ctx.fillText('✓',x,y);
     ctx.restore();
   });
+
+  drawCanvasGhost(ctx,subMapCvs);
 }
 
 </script>
