@@ -10,298 +10,667 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/theme.css">
 <style>
-  html,body{ overflow-y:auto; }
-  #app{ min-height:100%; display:flex; flex-direction:column; padding-top:var(--safe-top); padding-bottom:calc(20px + var(--safe-bottom)); }
-  #topbar{ display:flex; align-items:center; gap:10px; padding:14px 16px 6px; }
-  #homeBtn{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
-  #topbar h1{ font-size:17px; margin:0; flex:1; }
+html,body{ overflow-y:auto; overscroll-behavior:none; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+.screen{display:none;}
+.screen.active{display:flex;flex-direction:column;min-height:100vh;}
 
-  #modeTabs{ display:flex; gap:8px; padding:6px 16px 14px; }
-  .modetab{ flex:1; padding:10px 4px; border-radius:12px; border:1.5px solid var(--line); background:var(--bg-panel); color:var(--ink-dim); font-weight:700; font-size:12px; text-align:center; }
-  .modetab.on{ border-color:var(--brick); background:rgba(176,87,74,.14); color:#E2A79E; }
+/* ---------- home ---------- */
+#scr-home{ padding-bottom:calc(24px + var(--safe-bottom)); }
+#topbar{ display:flex; align-items:center; gap:10px; padding:calc(14px + var(--safe-top)) 16px 6px; }
+#homeBtn{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+#topbar h1{ font-size:17px; margin:0; flex:1; }
+.hero{ padding:10px 20px 6px; text-align:center; }
+.hero .hi{ font-size:44px; margin-bottom:8px; }
+.hero h2{ font-size:21px; margin:0 0 8px; }
+.hero p{ font-size:13.5px; color:var(--ink-dim); line-height:1.7; margin:0; }
+.mode-grid{ display:flex; flex-direction:column; gap:14px; padding:18px 16px 8px; }
+.mode-card{ background:var(--bg-panel); border:1.5px solid var(--line); border-radius:18px; padding:20px 18px; display:flex; align-items:center; gap:16px; text-align:left; }
+.mode-card .mi{ font-size:38px; flex-shrink:0; width:56px; height:56px; border-radius:16px; display:flex; align-items:center; justify-content:center; }
+.mode-card.c-maze .mi{ background:rgba(122,148,113,.18); }
+.mode-card.c-write .mi{ background:rgba(217,164,65,.18); }
+.mode-card .mt{ flex:1; }
+.mode-card h3{ font-size:16.5px; margin:0 0 4px; }
+.mode-card p{ font-size:12.5px; color:var(--ink-dim); margin:0; line-height:1.55; }
+.mode-card .arrow{ font-size:20px; color:var(--ink-faint); flex-shrink:0; }
+.note-box{ margin:10px 16px 0; background:var(--bg-panel-2); border:1px solid var(--line); border-radius:14px; padding:13px 16px; font-size:12.5px; color:var(--ink-dim); line-height:1.7; }
+.note-box b{ color:var(--amber); }
 
-  .wrap{ padding:0 16px; }
-  .card{ background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; }
-  .eyebrow{ font-size:10.5px; color:var(--amber); font-weight:700; letter-spacing:.06em; margin-bottom:4px; }
-  .card h2{ font-size:15.5px; margin:0 0 4px; }
-  .card p.sub{ font-size:12.5px; color:var(--ink-dim); margin:0 0 10px; line-height:1.5; }
+/* ---------- game shell (shared) ---------- */
+.ghdr{ display:flex; align-items:center; gap:10px; padding:calc(12px + var(--safe-top)) 16px 10px; flex-shrink:0; }
+.gback{ width:34px; height:34px; border-radius:50%; background:var(--bg-panel); border:1px solid var(--line); color:var(--ink); font-size:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.gtitle{ font-size:16.5px; font-weight:800; flex:1; }
+.gtimer{ display:flex; align-items:center; gap:4px; background:var(--bg-panel); border:1px solid var(--line); padding:5px 12px; border-radius:20px; flex-shrink:0; }
+.gtimer .tn{ font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:800; min-width:22px; text-align:center; }
+.gtimer .tn.danger{ color:var(--brick); }
+@keyframes tblink{0%,100%{opacity:1}50%{opacity:.2}}
+.gtimer .tn.blinking{ animation:tblink .6s infinite; }
+[id^="red-flash"]{ position:fixed; inset:0; pointer-events:none; z-index:80; }
+@keyframes redpulse{0%,100%{background:rgba(176,40,40,0)}50%{background:rgba(176,40,40,.32)}}
+[id^="red-flash"].on{ animation:redpulse .6s infinite; }
 
-  .lvrow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
-  .lvbtn{ padding:10px 4px; border-radius:10px; border:1.5px solid var(--line); background:var(--bg-panel-2); color:var(--ink-dim); text-align:center; font-size:12.5px; font-weight:700; }
-  .lvbtn.on{ border-color:var(--brick); background:rgba(176,87,74,.16); color:#E2A79E; }
+.lvbar{ padding:0 16px 12px; flex-shrink:0; }
+.lvrow{ display:flex; align-items:center; gap:10px; background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:10px 14px; }
+.lvlabel{ font-size:12px; color:var(--ink-dim); font-weight:700; flex-shrink:0; }
+input[type=range]{ flex:1; height:6px; -webkit-appearance:none; appearance:none; background:linear-gradient(90deg,#7A9471 0%,#D9A441 45%,#c9793f 72%,#B0574A 100%); border-radius:3px; outline:none; }
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:#fff; border:3px solid var(--brick); cursor:pointer; }
+input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--brick);cursor:pointer; }
+.lvbadge{ min-width:64px; text-align:center; font-size:12.5px; font-weight:800; padding:4px 10px; border-radius:20px; background:var(--bg-panel-2); flex-shrink:0; }
+.lvbadge.lv0{ color:#9AC28E; } .lvbadge.lv1{ color:#B7D19E; } .lvbadge.lv2{ color:var(--amber); }
+.lvbadge.lv3{ color:#e0a15a; } .lvbadge.lv4{ color:#d9793f; } .lvbadge.lv5{ color:var(--brick); }
 
-  canvas{ width:100%; aspect-ratio:1/1; background:#0F1216; border-radius:14px; border:1px solid var(--line); touch-action:none; display:block; }
-  .statsRow{ display:flex; justify-content:space-between; margin-top:10px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-dim); }
-  .statsRow b{ color:var(--amber); }
-  .ghostBtn{ background:var(--bg-panel-2); color:var(--ink-dim); border:1px solid var(--line); font-weight:700; font-size:13px; padding:10px 18px; border-radius:22px; width:100%; margin-top:10px; }
+.gbody{ flex:1; display:flex; flex-direction:column; gap:12px; padding:0 16px 20px; overflow-y:auto; }
+
+/* ---------- maze ---------- */
+.mbar{ display:flex; align-items:center; gap:2px; overflow-x:auto; background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:10px 12px; -webkit-overflow-scrolling:touch; }
+.mbar::-webkit-scrollbar{ display:none; }
+.mstep{ display:flex; flex-direction:column; align-items:center; gap:4px; flex-shrink:0; min-width:52px; }
+.mdot{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; background:var(--bg-panel-2); border:2px solid var(--line); color:var(--ink-faint); }
+.mdot.active{ border-color:var(--amber); background:rgba(217,164,65,.18); color:var(--amber); }
+.mdot.done{ border-color:var(--sage); background:rgba(122,148,113,.22); color:#9AC28E; }
+.mname{ font-size:10px; color:var(--ink-faint); white-space:nowrap; }
+.mname.active-name{ color:var(--amber); font-weight:700; }
+.marrow{ color:var(--ink-faint); font-size:13px; flex-shrink:0; padding:0 1px; }
+.maze-map-card{ background:#fff; border-radius:18px; overflow:hidden; position:relative; flex-shrink:0; border:1px solid var(--line); }
+.maze-map-area{ position:relative; width:100%; aspect-ratio:1/1; }
+#mazeCvs{ display:block; touch-action:none; width:100%; height:100%; }
+.maze-toast{ position:absolute; left:50%; top:10px; transform:translateX(-50%); background:rgba(122,148,113,.95); color:#fff; font-size:13px; font-weight:800; padding:8px 16px; border-radius:20px; pointer-events:none; white-space:nowrap; box-shadow:0 4px 14px rgba(0,0,0,.3); z-index:40; }
+.maze-hint{ text-align:center; font-size:12.5px; color:var(--ink-dim); padding:2px 4px; }
+.maze-stats{ display:flex; gap:10px; }
+.mstat{ flex:1; background:var(--bg-panel); border:1px solid var(--line); border-radius:12px; padding:10px 8px; text-align:center; }
+.mstat .mv{ font-size:19px; font-weight:900; color:var(--amber); font-family:'JetBrains Mono',monospace; }
+.mstat .ml{ font-size:11px; color:var(--ink-dim); margin-top:2px; }
+.mrestart{ background:var(--bg-panel-2); color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:13px; font-size:14.5px; font-weight:700; }
+
+/* ---------- write ---------- */
+.wsbar{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:10px 14px; flex-shrink:0; }
+.wsdots{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+.wsdot{ width:9px; height:9px; border-radius:50%; background:var(--line); }
+.wsdot.done{ background:var(--sage); } .wsdot.cur{ background:var(--amber); width:13px; height:13px; }
+.wsinfo{ font-size:12.5px; color:var(--ink-dim); } .wsinfo b{ color:var(--ink); }
+.wstep-label{ background:var(--bg-panel); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-size:14px; font-weight:700; color:var(--amber); text-align:center; }
+.wcvs-outer{ position:relative; border-radius:16px; overflow:hidden; border:1px solid var(--line); background:#fff; flex-shrink:0; }
+.wcvs-guide{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:2; }
+.wcvs-guide-text{ font-size:58px; font-weight:900; color:rgba(176,87,74,0.14); letter-spacing:4px; text-align:center; line-height:1.2; padding:8px 16px; user-select:none; }
+.wcvs-guide-text.sentence{ font-size:30px; letter-spacing:1px; }
+#wCvs{ display:block; touch-action:none; cursor:crosshair; width:100%; position:relative; z-index:1; }
+.wcvs-empty-hint{ position:absolute; bottom:12px; left:0; right:0; text-align:center; color:#94a3b8; font-size:13px; font-weight:600; pointer-events:none; z-index:3; }
+.wstats-row{ display:flex; gap:10px; }
+.wsbox{ flex:1; background:var(--bg-panel); border:1px solid var(--line); border-radius:12px; padding:11px 8px; text-align:center; }
+.wsval{ font-size:20px; font-weight:900; color:var(--amber); font-family:'JetBrains Mono',monospace; }
+.wsval.good{ color:#9AC28E; } .wsval.warn{ color:#e0a15a; } .wsval.bad{ color:var(--brick); }
+.wslbl{ font-size:11px; color:var(--ink-dim); margin-top:3px; }
+.wbtn-row{ display:flex; gap:10px; }
+.wbtn-clr{ flex:1; background:var(--bg-panel-2); color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:14px; font-size:15px; font-weight:700; }
+.wbtn-nxt{ flex:2; background:var(--brick); color:#fff; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:800; }
+
+/* ---------- result screens ---------- */
+.res-wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:36px 20px calc(28px + var(--safe-bottom)); gap:16px; text-align:center; }
+.res-icon{ font-size:56px; }
+.res-title{ font-size:24px; font-weight:900; }
+.res-sub{ font-size:14px; color:var(--ink-dim); line-height:1.7; max-width:340px; }
+.res-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:380px; }
+.res-card{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:14px; }
+.res-card .rv{ font-size:21px; font-weight:900; color:var(--amber); font-family:'JetBrains Mono',monospace; }
+.res-card .rl{ font-size:12px; color:var(--ink-dim); margin-top:3px; }
+.res-msg{ background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:15px 17px; font-size:13.5px; line-height:1.85; text-align:left; max-width:380px; width:100%; }
+.res-msg li{ margin-left:18px; margin-bottom:3px; color:var(--ink-dim); }
+.res-btns{ display:flex; flex-direction:column; gap:10px; width:100%; max-width:300px; margin-top:4px; }
+.btn-again{ background:var(--brick); color:#fff; border:none; border-radius:14px; padding:15px; font-size:16px; font-weight:800; }
+.btn-alt{ background:var(--bg-panel); color:var(--ink); border:1px solid var(--line); border-radius:14px; padding:14px; font-size:14.5px; font-weight:700; }
+.btn-home{ background:transparent; color:var(--ink-dim); border:none; padding:10px; font-size:13.5px; font-weight:700; }
+
+/* ---------- maze victory modal ---------- */
+.mov{ position:fixed; inset:0; background:rgba(0,0,0,.72); display:none; align-items:center; justify-content:center; z-index:200; padding:20px; }
+.mov.show{ display:flex; }
+.mbox{ background:var(--bg-panel); border:1.5px solid var(--line); border-radius:20px; padding:26px 22px; text-align:center; width:100%; max-width:340px; }
+.mbox .mic{ font-size:48px; margin-bottom:10px; }
+.mbox h3{ font-size:20px; margin:0 0 8px; color:var(--sage); }
+.mbox p{ font-size:13.5px; color:var(--ink-dim); line-height:1.7; margin:0 0 18px; }
+.mbtns{ display:flex; flex-direction:column; gap:9px; }
+.mbtns button{ padding:14px; border-radius:12px; font-size:14.5px; font-weight:700; border:none; }
+.mbtns .bpri{ background:var(--brick); color:#fff; }
+.mbtns .bsec{ background:var(--bg-panel-2); color:var(--ink); border:1px solid var(--line); }
 </style>
 </head>
 <body>
-<div id="app">
+
+<!-- ================= HOME ================= -->
+<div id="scr-home" class="screen active">
   <div id="topbar">
     <a id="homeBtn" href="index.html">&#8592;</a>
     <h1>손떨림 체험</h1>
   </div>
-
-  <div id="modeTabs">
-    <button class="modetab on" data-mode="task">&#127865; 생활과제</button>
-    <button class="modetab" data-mode="maze">&#129517; 미로 통과</button>
-    <button class="modetab" data-mode="trace">&#9998; 따라쓰기</button>
+  <div class="hero">
+    <div class="hi">&#9995;</div>
+    <h2>수전증 어르신의 손을 체험해보세요</h2>
+    <p>손이 떨리면 길을 걷는 것도, 글씨를 쓰는 것도<br>모두 몇 배는 힘들어집니다.</p>
   </div>
+  <div class="mode-grid">
+    <div class="mode-card c-maze" onclick="goMaze()">
+      <div class="mi">&#129517;</div>
+      <div class="mt"><h3>미로 통과 · 병원 길찾기</h3><p>병원 안내도를 따라 접수부터 약국까지, 흔들리는 손끝으로 길을 그리며 찾아가요</p></div>
+      <div class="arrow">&#8250;</div>
+    </div>
+    <div class="mode-card c-write" onclick="goWrite()">
+      <div class="mi">&#9999;&#65039;</div>
+      <div class="mt"><h3>글쓰기 · 수전증 따라쓰기</h3><p>연한 글씨 위에 이름과 문장을 따라 써보며 흔들림과 시간 압박을 함께 느껴봐요</p></div>
+      <div class="arrow">&#8250;</div>
+    </div>
+  </div>
+  <div class="note-box">&#128161; <b>떨림 강도</b>를 직접 조절해가며, 정상부터 매우 심함까지 어르신이 겪는 어려움의 정도를 단계별로 느껴보세요. 교육 목적으로 제작된 체험입니다.</div>
+</div>
 
-  <div class="wrap">
-    <div class="card">
-      <div class="eyebrow" id="modeEyebrow">생활과제 체험 &middot; 컵 옮기기</div>
-      <h2 id="modeTitle">떨리는 손으로 컵을 받침 위에 올려보세요</h2>
-      <p class="sub" id="modeSub">원(컵)을 눌러서 목표 지점의 점선 원 안까지 옮겨보세요. 손떨림 정도에 따라 실제 손가락 위치와 컵 위치가 달라집니다.</p>
-
-      <div class="lvrow">
-        <div class="lvbtn on" data-lv="0">&#9679; 정상</div>
-        <div class="lvbtn" data-lv="1">&#9679;&#9679; 경증</div>
-        <div class="lvbtn" data-lv="2">&#9679;&#9679;&#9679; 중증</div>
+<!-- ================= MAZE ================= -->
+<div id="scr-maze" class="screen">
+  <div class="ghdr">
+    <button class="gback" onclick="goHome()">&#8592;</button>
+    <div class="gtitle">미로 통과 · 병원 길찾기</div>
+  </div>
+  <div class="lvbar">
+    <div class="lvrow">
+      <span class="lvlabel">떨림 강도</span>
+      <input type="range" id="mSlider" min="0" max="5" value="0" oninput="onMSlider(this.value)">
+      <span class="lvbadge lv0" id="mBadge">정상</span>
+    </div>
+  </div>
+  <div class="gbody">
+    <div class="mbar" id="mMbar"></div>
+    <div class="maze-map-card">
+      <div class="maze-map-area" id="mazeMapArea">
+        <canvas id="mazeCvs"></canvas>
       </div>
+    </div>
+    <div class="maze-hint">&#128070; 입구에서부터 손끝으로 길을 따라 그어보세요 &middot; 떨림 때문에 손끝이 흔들려요</div>
+    <div class="maze-stats">
+      <div class="mstat"><div class="mv" id="mvHits">0</div><div class="ml">벽 부딪힘</div></div>
+      <div class="mstat"><div class="mv" id="mvDone">0/5</div><div class="ml">완료한 곳</div></div>
+    </div>
+    <button class="mrestart" onclick="restartMaze()">처음부터 다시</button>
+  </div>
+  <div class="mov" id="mazeVictory">
+    <div class="mbox">
+      <div class="mic">&#127881;</div>
+      <h3>병원 코스 완료!</h3>
+      <p id="mazeVictoryMsg">접수·수납부터 약국까지<br>흔들리는 손으로 모두 찾아가셨습니다!</p>
+      <div class="mbtns">
+        <button class="bpri" onclick="restartMaze()">다시 도전하기</button>
+        <button class="bsec" onclick="goWrite()">글쓰기 체험하러 가기 &#8594;</button>
+        <button class="bsec" onclick="goHome()">&#8592; 홈으로</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-      <canvas id="cv" width="600" height="600"></canvas>
-      <div class="statsRow"><span>시도 <b id="statTries">0</b>회</span><span>성공 <b id="statOK">0</b>회</span><span id="statExtra">평균 이탈 <b>0px</b></span></div>
-      <button class="ghostBtn" id="btnReset">다시 시작</button>
+<!-- ================= WRITE (game) ================= -->
+<div id="scr-write" class="screen">
+  <div id="red-flash-w"></div>
+  <div class="ghdr">
+    <button class="gback" onclick="goHome()">&#8592;</button>
+    <div class="gtitle">글쓰기 · 수전증 따라쓰기</div>
+    <div class="gtimer"><span>&#9201;</span><span class="tn" id="wtnum">15</span></div>
+  </div>
+  <div class="lvbar">
+    <div class="lvrow">
+      <span class="lvlabel">떨림 강도</span>
+      <input type="range" id="wSlider" min="0" max="5" value="0" oninput="onWSlider(this.value)">
+      <span class="lvbadge lv0" id="wBadge">정상</span>
+    </div>
+  </div>
+  <div class="gbody">
+    <div class="wsbar">
+      <div class="wsdots" id="wsdots"></div>
+      <div class="wsinfo" id="wsinfo">단계 1 / 6</div>
+    </div>
+    <div class="wstep-label" id="wstep-label">&#128221; 단어 따라쓰기</div>
+    <div class="wcvs-outer" id="wcvs-outer">
+      <canvas id="wCvs"></canvas>
+      <div class="wcvs-guide"><div class="wcvs-guide-text" id="wguide-text">이름</div></div>
+      <div class="wcvs-empty-hint" id="wempty-hint">&#128070; 연한 글씨 위에 따라 써보세요</div>
+    </div>
+    <div class="wstats-row">
+      <div class="wsbox"><div class="wsval" id="wsv-strokes">0</div><div class="wslbl">획 수</div></div>
+      <div class="wsbox"><div class="wsval good" id="wsv-stab">100</div><div class="wslbl">안정도 %</div></div>
+      <div class="wsbox"><div class="wsval" id="wsv-dev">0px</div><div class="wslbl">평균 떨림</div></div>
+    </div>
+    <div class="wbtn-row">
+      <button class="wbtn-clr" onclick="wClearCvs()">지우기</button>
+      <button class="wbtn-nxt" id="wbtn-nxt" onclick="wNextStep()">다음 &#8594;</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= WRITE (result) ================= -->
+<div id="scr-write-result" class="screen">
+  <div class="res-wrap">
+    <div class="res-icon">&#127937;</div>
+    <div class="res-title">체험 완료!</div>
+    <div class="res-sub" id="w-res-sub"></div>
+    <div class="res-cards">
+      <div class="res-card"><div class="rv" id="w-r-stab">&mdash;</div><div class="rl">평균 안정도</div></div>
+      <div class="res-card"><div class="rv" id="w-r-dev">&mdash;</div><div class="rl">평균 떨림</div></div>
+      <div class="res-card"><div class="rv" id="w-r-lv">&mdash;</div><div class="rl">최종 떨림 강도</div></div>
+      <div class="res-card"><div class="rv" id="w-r-steps">&mdash;</div><div class="rl">완료 단계</div></div>
+    </div>
+    <div class="res-msg" id="w-res-msg"></div>
+    <div class="res-btns">
+      <button class="btn-again" onclick="goWrite()">다시 체험하기</button>
+      <button class="btn-alt" onclick="goMaze()">미로 통과 체험하러 가기 &#8594;</button>
+      <button class="btn-home" onclick="goHome()">&#8592; 홈으로</button>
     </div>
   </div>
 </div>
 
 <script>
-(function(){
 "use strict";
+/* ════════════════════════════════════════════
+   화면 전환
+   ════════════════════════════════════════════ */
+function showScr(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function goHome(){ wStopTimer(); showScr('scr-home'); }
+function goMaze(){ showScr('scr-maze'); initMaze(); }
+function goWrite(){ showScr('scr-write'); wStart(); }
 
-const cv = document.getElementById('cv');
-const ctx = cv.getContext('2d');
-const modeEyebrow = document.getElementById('modeEyebrow');
-const modeTitle = document.getElementById('modeTitle');
-const modeSub = document.getElementById('modeSub');
-const statTries = document.getElementById('statTries');
-const statOK = document.getElementById('statOK');
-const statExtra = document.getElementById('statExtra');
+/* ════════════════════════════════════════════
+   공통 손떨림 수치 (6단계)
+   ════════════════════════════════════════════ */
+var LV_LABEL=['정상','경미','경미+','중등도','심함','매우심함'];
+var LV_CLASS=['lv0','lv1','lv2','lv3','lv4','lv5'];
+var LV_AMP=[0,2.5,6,12,20,30];
+function makeTremor(){
+  var noiseT=0;
+  return function(x,y,level){
+    if(level===0) return {x:x,y:y};
+    var amp=LV_AMP[level];
+    noiseT+=0.20+level*0.05;
+    var t=noiseT;
+    var nx=Math.sin(t*2.3)*amp*0.55+Math.sin(t*5.7)*amp*0.30+Math.sin(t*12.1)*amp*0.15;
+    var ny=Math.sin(t*3.1+1.2)*amp*0.55+Math.sin(t*7.3+0.8)*amp*0.30+Math.sin(t*14.5+2.1)*amp*0.15;
+    return {x:x+nx,y:y+ny,dev:Math.hypot(nx,ny)};
+  };
+}
 
-let mode = 'task';
-let level = 0; // 0 normal, 1 mild, 2 severe
-const AMP = [0, 9, 22];       // px jitter amplitude
-const FREQ = [0, 5.6, 7.8];   // Hz-ish
+/* ════════════════════════════════════════════
+   미로 통과 · 병원 길찾기
+   (28x28 대신 22x22 회랑형 격자 — 접수·수납→채혈실→진료실1→방사선과→약국)
+   ════════════════════════════════════════════ */
+var PR=22, PC=22;
+var MISSIONS=[
+  {n:'접수·수납',ic:'📋'},{n:'채혈실',ic:'🩸'},{n:'진료실1',ic:'🩺'},
+  {n:'방사선과',ic:'🫁'},{n:'약국',ic:'💊'}
+];
+var DOORS={0:{r:19,c:8},1:{r:2,c:10},2:{r:2,c:16},3:{r:10,c:2},4:{r:19,c:12}};
+var ROOMS=[
+  {r:3, c:3,  w:5, h:6, icon:'🚻', name:'화장실',    color:'#dbeafe', mi:-1},
+  {r:3, c:9,  w:4, h:6, icon:'🩸', name:'채혈실',    color:'#fee2e2', mi:1},
+  {r:3, c:14, w:5, h:6, icon:'🩺', name:'진료실1',   color:'#d1fae5', mi:2},
+  {r:9, c:3,  w:5, h:4, icon:'🫁', name:'방사선과',  color:'#ede9fe', mi:3},
+  {r:9, c:9,  w:4, h:2, icon:'💉', name:'주사실',    color:'#dbeafe', mi:-1},
+  {r:11,c:9,  w:4, h:2, icon:'🛡', name:'엘리베이터',color:'#e2e8f0', mi:-1},
+  {r:9, c:14, w:5, h:2, icon:'✚',       name:'내과',      color:'#dbeafe', mi:-1},
+  {r:11,c:14, w:5, h:2, icon:'👁', name:'안과',      color:'#d1fae5', mi:-1},
+  {r:13,c:3,  w:4, h:6, icon:'🤝', name:'상담실',    color:'#dcfce7', mi:-1},
+  {r:13,c:7,  w:4, h:6, icon:'📋', name:'접수·수납', color:'#bbf7d0', mi:0},
+  {r:13,c:11, w:4, h:6, icon:'💊', name:'약국',      color:'#fce7f3', mi:4},
+  {r:13,c:15, w:4, h:6, icon:'🦴', name:'정형외과',  color:'#dbeafe', mi:-1}
+];
+var ENT_R=20, ENT_C=10;
 
-let tries=0, ok=0, deviations=[];
+var mCvs,mCtx,mCW,mCH,mMap,mPts,mDraw,mIdx,mHits,mDone,mBombActive,mLevel=0;
+var mTremor=makeTremor();
 
-const MODES = {
-  task: {
-    eyebrow:'생활과제 체험 · 컵 옮기기',
-    title:'떨리는 손으로 컵을 받침 위에 올려보세요',
-    sub:'원(컵)을 눌러서 목표 지점의 점선 원 안까지 옮겨보세요. 손떨림 정도에 따라 실제 손가락 위치와 컵 위치가 달라집니다.'
-  },
-  maze: {
-    eyebrow:'미로 통과 체험 · 손끝으로 길 따라가기',
-    title:'떨리는 손으로 미로 길을 벗어나지 않게 통과해보세요',
-    sub:'점을 눌러서 시작점부터 도착점까지 회색 길을 따라 옮겨보세요. 벽에 닿은 횟수가 기록됩니다.'
-  },
-  trace: {
-    eyebrow:'따라쓰기 체험 · 곡선 따라 그리기',
-    title:'점선 곡선을 최대한 벗어나지 않게 따라 그어보세요',
-    sub:'선을 따라 손가락을 움직이면 실제 궤적이 어떻게 흔들리는지, 평균 이탈 거리로 점수를 알려드려요.'
+function buildMazeMap(){
+  mMap=[];
+  for(var r=0;r<PR;r++){ mMap[r]=[]; for(var c=0;c<PC;c++) mMap[r][c]=1; }
+  function openRect(r1,r2,c1,c2){
+    for(var rr=r1;rr<=r2;rr++) for(var cc=c1;cc<=c2;cc++) mMap[rr][cc]=0;
   }
-};
-
-document.querySelectorAll('.modetab').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    document.querySelectorAll('.modetab').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-    mode = b.dataset.mode;
-    resetStats();
-    applyModeText();
-    initScene();
+  openRect(1,2,1,20);   // 위쪽 복도
+  openRect(19,20,1,20); // 아래쪽 복도
+  openRect(1,20,1,2);   // 왼쪽 복도
+  openRect(1,20,19,20); // 오른쪽 복도
+  ROOMS.forEach(function(rm){
+    for(var rr=rm.r; rr<rm.r+rm.h; rr++) for(var cc=rm.c; cc<rm.c+rm.w; cc++)
+      if(rr>=0&&rr<PR&&cc>=0&&cc<PC) mMap[rr][cc]=1;
   });
-});
-document.querySelectorAll('.lvbtn').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    document.querySelectorAll('.lvbtn').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on');
-    level = +b.dataset.lv;
-    resetStats();
-    initScene();
+}
+
+function initMaze(){
+  mIdx=0; mHits=0; mBombActive=false; mDraw=false;
+  buildMazeMap();
+  document.getElementById('mSlider').value=0; onMSlider(0);
+  document.getElementById('mvHits').textContent='0';
+  document.getElementById('mvDone').textContent='0/'+MISSIONS.length;
+  document.getElementById('mazeVictory').classList.remove('show');
+  updMazeMbar();
+  var area=document.getElementById('mazeMapArea');
+  requestAnimationFrame(function(){
+    var aW=area.clientWidth||340, aH=area.clientHeight||340;
+    var dpr=Math.min(2,window.devicePixelRatio||1);
+    mCW=Math.max(1,Math.floor(aW*dpr/PC)); mCH=Math.max(1,Math.floor(aH*dpr/PR));
+    mCvs=document.getElementById('mazeCvs');
+    mCvs.width=mCW*PC; mCvs.height=mCH*PR;
+    mCtx=mCvs.getContext('2d');
+    mPts=[{x:ENT_C*mCW+mCW/2, y:ENT_R*mCH+mCH/2, r:ENT_R, c:ENT_C}];
+    drawMaze();
   });
-});
-document.getElementById('btnReset').addEventListener('click', ()=>{ resetStats(); initScene(); });
-
-function applyModeText(){
-  const m = MODES[mode];
-  modeEyebrow.textContent = m.eyebrow;
-  modeTitle.textContent = m.title;
-  modeSub.textContent = m.sub;
-  statExtra.style.display = mode==='trace' ? 'inline' : (mode==='maze' ? 'inline' : 'none');
-  statExtra.innerHTML = mode==='maze' ? '벽 접촉 <b id="statHit">0</b>회' : '평균 이탈 <b id="statDev">0px</b>';
 }
-
-// ---------- shared tremor ----------
-let t0 = performance.now();
-function jitter(amp){
-  const t = (performance.now()-t0)/1000;
-  const f = FREQ[level];
-  const jx = Math.sin(t*f*2*Math.PI + 1.3)*amp + (Math.random()-0.5)*amp*0.5;
-  const jy = Math.cos(t*f*2*Math.PI*0.87)*amp + (Math.random()-0.5)*amp*0.5;
-  return {jx,jy};
+function restartMaze(){ document.getElementById('mazeVictory').classList.remove('show'); initMaze(); }
+function onMSlider(v){
+  mLevel=parseInt(v);
+  var b=document.getElementById('mBadge');
+  b.textContent=LV_LABEL[mLevel]; b.className='lvbadge '+LV_CLASS[mLevel];
 }
-
-function resetStats(){
-  tries=0; ok=0; deviations=[]; 
-  statTries.textContent='0'; statOK.textContent='0';
+function mPtc(clientX,clientY){
+  var rect=mCvs.getBoundingClientRect();
+  var sx=mCvs.width/rect.width, sy=mCvs.height/rect.height;
+  var x=(clientX-rect.left)*sx, y=(clientY-rect.top)*sy;
+  return {x:x,y:y,r:Math.floor(y/mCH),c:Math.floor(x/mCW)};
 }
-
-// ---------- pointer tracking ----------
-let pointerActive=false, px=0, py=0;
-function toCanvasXY(e){
-  const rect = cv.getBoundingClientRect();
-  const clientX = e.touches? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches? e.touches[0].clientY : e.clientY;
-  return { x:(clientX-rect.left)/rect.width*cv.width, y:(clientY-rect.top)/rect.height*cv.height };
-}
-cv.addEventListener('pointerdown', e=>{ pointerActive=true; const p=toCanvasXY(e); px=p.x; py=p.y; });
-window.addEventListener('pointermove', e=>{ if(!pointerActive) return; const p=toCanvasXY(e); px=p.x; py=p.y; });
-window.addEventListener('pointerup', ()=>{ pointerActive=false; onRelease(); });
-
-// ================= TASK MODE (컵 옮기기) =================
-let cup, target;
-function taskInit(){
-  cup = {x:120, y:480};
-  target = {x:480, y:150, r:46};
-}
-function taskDraw(){
-  ctx.clearRect(0,0,cv.width,cv.height);
-  // target
-  ctx.setLineDash([8,8]);
-  ctx.strokeStyle='#7A9471'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.arc(target.x,target.y,target.r,0,7); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle='rgba(122,148,113,.12)';
-  ctx.beginPath(); ctx.arc(target.x,target.y,target.r,0,7); ctx.fill();
-
-  let cx=cup.x, cy=cup.y;
-  if(pointerActive){
-    const {jx,jy} = jitter(AMP[level]);
-    cx = px+jx; cy = py+jy;
-    cup.x=cx; cup.y=cy;
+function mCellWall(r,c){ if(r<0||r>=PR||c<0||c>=PC) return true; return mMap[r][c]===1; }
+function mHandleMove(clientX,clientY){
+  if(!mDraw||mBombActive) return;
+  var raw=mPtc(clientX,clientY);
+  var j=mTremor(raw.x,raw.y,mLevel);
+  var p={x:j.x,y:j.y,r:Math.floor(j.y/mCH),c:Math.floor(j.x/mCW)};
+  if(p.r<0||p.r>=PR||p.c<0||p.c>=PC) return;
+  if(mCellWall(p.r,p.c)){
+    var nb=[mCellWall(p.r-1,p.c),mCellWall(p.r+1,p.c),mCellWall(p.r,p.c-1),mCellWall(p.r,p.c+1)];
+    var allWall=nb.every(function(v){return v;});
+    if(allWall){
+      mDraw=false; mHits++; document.getElementById('mvHits').textContent=mHits;
+      mTriggerBomb(p.x,p.y,function(){
+        mPts=[{x:ENT_C*mCW+mCW/2,y:ENT_R*mCH+mCH/2,r:ENT_R,c:ENT_C}];
+        drawMaze();
+      });
+      return;
+    }
   }
-  ctx.fillStyle='#D9A441';
-  ctx.beginPath(); ctx.arc(cx,cy,30,0,7); ctx.fill();
-  ctx.fillStyle='#1B1300'; ctx.font='bold 22px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('☕', cx, cy);
+  var last=mPts[mPts.length-1];
+  if(p.r!==last.r||p.c!==last.c) mPts.push({x:p.x,y:p.y,r:p.r,c:p.c});
+  drawMaze(); mChkArrive(p.r,p.c);
 }
-function taskRelease(){
-  const dx = cup.x-target.x, dy=cup.y-target.y;
-  const dist = Math.hypot(dx,dy);
-  tries++; if(dist<target.r) ok++;
-  statTries.textContent=tries; statOK.textContent=ok;
-  cup = {x:120,y:480};
-}
-
-// ================= MAZE MODE =================
-let mazeWalls, mazePos, mazeGoal, hitCount=0;
-function mazeInit(){
-  mazeWalls = [
-    {x:0,y:0,w:600,h:70},{x:0,y:530,w:600,h:70},
-    {x:0,y:0,w:70,h:600},{x:530,y:0,w:70,h:600},
-    {x:150,y:150,w:340,h:60},
-    {x:150,y:390,w:340,h:60},
-    {x:150,y:270,w:60,h:120},
-  ];
-  mazePos = {x:110,y:110};
-  mazeGoal = {x:490,y:490,r:36};
-  hitCount=0;
-  const el = document.getElementById('statHit'); if(el) el.textContent='0';
-}
-function pointInRect(x,y,r){ return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h; }
-function mazeDraw(){
-  ctx.clearRect(0,0,cv.width,cv.height);
-  ctx.fillStyle='#242B32';
-  mazeWalls.forEach(w=> ctx.fillRect(w.x,w.y,w.w,w.h));
-  ctx.setLineDash([8,8]); ctx.strokeStyle='#7A9471'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.arc(mazeGoal.x,mazeGoal.y,mazeGoal.r,0,7); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle='#8FAEDB'; ctx.beginPath(); ctx.arc(110,110,14,0,7); ctx.fill();
-
-  let cx=mazePos.x, cy=mazePos.y;
-  if(pointerActive){
-    const {jx,jy} = jitter(AMP[level]);
-    cx = px+jx; cy=py+jy;
-    let hitWall=false;
-    mazeWalls.forEach(w=>{ if(pointInRect(cx,cy,w)) hitWall=true; });
-    if(hitWall){ hitCount++; const el=document.getElementById('statHit'); if(el) el.textContent=hitCount; }
-    else { mazePos.x=cx; mazePos.y=cy; }
+(function(){
+  var cvs;
+  function bind(){
+    cvs=document.getElementById('mazeCvs');
+    cvs.addEventListener('touchstart',function(e){
+      if(mBombActive) return;
+      var t=e.touches[0], raw=mPtc(t.clientX,t.clientY), last=mPts[mPts.length-1];
+      if(Math.abs(raw.r-last.r)<=3 && Math.abs(raw.c-last.c)<=3) mDraw=true;
+      e.preventDefault();
+    },{passive:false});
+    cvs.addEventListener('touchmove',function(e){ mHandleMove(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault(); },{passive:false});
+    cvs.addEventListener('touchend',function(e){ mDraw=false; e.preventDefault(); },{passive:false});
+    cvs.addEventListener('mousedown',function(e){
+      if(mBombActive) return;
+      var raw=mPtc(e.clientX,e.clientY), last=mPts[mPts.length-1];
+      if(Math.abs(raw.r-last.r)<=3 && Math.abs(raw.c-last.c)<=3) mDraw=true;
+    });
+    cvs.addEventListener('mousemove',function(e){ mHandleMove(e.clientX,e.clientY); });
+    window.addEventListener('mouseup',function(){ mDraw=false; });
   }
-  ctx.fillStyle='#D9A441'; ctx.beginPath(); ctx.arc(mazePos.x,mazePos.y,16,0,7); ctx.fill();
-
-  if(Math.hypot(mazePos.x-mazeGoal.x, mazePos.y-mazeGoal.y) < mazeGoal.r){
-    tries++; ok++; statTries.textContent=tries; statOK.textContent=ok;
-    mazePos = {x:110,y:110};
-  }
-}
-function mazeRelease(){}
-
-// ================= TRACE MODE =================
-let tracePoints, traceDrawn;
-function traceInit(){
-  tracePoints = [];
-  for(let i=0;i<=40;i++){
-    const x = 70 + i*(460/40);
-    const y = 300 + Math.sin(i/40*Math.PI*2.4)*140;
-    tracePoints.push({x,y});
-  }
-  traceDrawn = [];
-}
-function nearestDevOnPath(x,y){
-  let min=Infinity;
-  tracePoints.forEach(p=>{ const d=Math.hypot(p.x-x,p.y-y); if(d<min) min=d; });
-  return min;
-}
-function traceDraw(){
-  ctx.clearRect(0,0,cv.width,cv.height);
-  ctx.setLineDash([6,8]); ctx.strokeStyle='#5B646D'; ctx.lineWidth=3;
-  ctx.beginPath(); tracePoints.forEach((p,i)=> i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
-  ctx.setLineDash([]);
-
-  if(pointerActive){
-    const {jx,jy} = jitter(AMP[level]);
-    const cx=px+jx, cy=py+jy;
-    traceDrawn.push({x:cx,y:cy});
-    deviations.push(nearestDevOnPath(cx,cy));
-  }
-  ctx.strokeStyle='#D9A441'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.beginPath();
-  traceDrawn.forEach((p,i)=> i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-  ctx.stroke();
-
-  const avg = deviations.length? (deviations.reduce((a,b)=>a+b,0)/deviations.length) : 0;
-  const el = document.getElementById('statDev'); if(el) el.textContent = avg.toFixed(0)+'px';
-}
-function traceRelease(){
-  if(traceDrawn.length>5){ tries++; statTries.textContent=tries; }
-  traceDrawn=[];
-}
-
-// ---------- dispatcher ----------
-function initScene(){
-  if(mode==='task') taskInit();
-  else if(mode==='maze') mazeInit();
-  else traceInit();
-}
-function onRelease(){
-  if(mode==='task') taskRelease();
-  else if(mode==='maze') mazeRelease();
-  else traceRelease();
-}
-function loop(){
-  requestAnimationFrame(loop);
-  if(mode==='task') taskDraw();
-  else if(mode==='maze') mazeDraw();
-  else traceDraw();
-}
-applyModeText();
-initScene();
-loop();
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind();
 })();
+function mTriggerBomb(bx,by,onDone){
+  mBombActive=true; var frame=0,total=20;
+  function anim(){
+    drawMaze();
+    var prog=frame/total, maxR=Math.max(mCW,mCH)*3;
+    var r=maxR*Math.sin(prog*Math.PI), al=1-prog, ctx=mCtx;
+    ctx.save();
+    var grd=ctx.createRadialGradient(bx,by,0,bx,by,r);
+    grd.addColorStop(0,'rgba(255,200,0,'+(al*0.9)+')'); grd.addColorStop(0.3,'rgba(255,120,40,'+(al*0.8)+')');
+    grd.addColorStop(0.6,'rgba(176,87,74,'+(al*0.5)+')'); grd.addColorStop(1,'rgba(176,87,74,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2); ctx.fill();
+    var sz=Math.max(16,Math.floor(Math.min(mCW,mCH)*3*(1-prog*0.4)));
+    ctx.font=sz+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.globalAlpha=Math.min(1,al*1.5); ctx.fillText('💥',bx,by); ctx.globalAlpha=1;
+    ctx.restore();
+    frame++; if(frame<=total) requestAnimationFrame(anim); else { mBombActive=false; onDone(); }
+  }
+  requestAnimationFrame(anim);
+}
+function mChkArrive(r,c){
+  if(mIdx>=MISSIONS.length) return;
+  var door=DOORS[mIdx]; if(!door) return;
+  if(Math.abs(r-door.r)<=1 && Math.abs(c-door.c)<=1){
+    var nm=MISSIONS[mIdx].n; mIdx++;
+    document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
+    updMazeMbar();
+    if(mIdx>=MISSIONS.length){
+      setTimeout(showMazeVictory,300);
+    } else {
+      mazeToast(nm+' 도착! 다음 목적지로 이동하세요');
+    }
+  }
+}
+function mazeToast(msg){
+  var area=document.getElementById('mazeMapArea'); if(!area) return;
+  var old=area.querySelector('.maze-toast'); if(old) old.remove();
+  var t=document.createElement('div'); t.className='maze-toast'; t.textContent=msg;
+  area.appendChild(t);
+  setTimeout(function(){ t.remove(); },1600);
+}
+function showMazeVictory(){
+  document.getElementById('mazeVictoryMsg').innerHTML='접수·수납부터 약국까지<br>흔들리는 손으로 모두 찾아가셨습니다!<br><br>벽에 <b>'+mHits+'번</b> 부딪히셨어요.';
+  document.getElementById('mazeVictory').classList.add('show');
+}
+function updMazeMbar(){
+  var bar=document.getElementById('mMbar'); if(!bar) return; bar.innerHTML='';
+  MISSIONS.forEach(function(m,i){
+    if(i>0){ var arr=document.createElement('div'); arr.className='marrow'; arr.textContent='›'; bar.appendChild(arr); }
+    var step=document.createElement('div'); step.className='mstep';
+    var dot=document.createElement('div'); dot.className='mdot '+(i<mIdx?'done':i===mIdx?'active':'');
+    dot.textContent=i<mIdx?'✓':m.ic;
+    var name=document.createElement('div'); name.className='mname'+(i===mIdx?' active-name':''); name.textContent=m.n;
+    step.appendChild(dot); step.appendChild(name); bar.appendChild(step);
+  });
+}
+function drawMaze(){
+  if(!mCtx) return;
+  var ctx=mCtx, W=mCvs.width, H=mCvs.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+  for(var r=0;r<PR;r++) for(var c=0;c<PC;c++){
+    ctx.fillStyle = mMap[r][c]===0 ? '#ffffff' : '#eef2f7';
+    ctx.fillRect(c*mCW, r*mCH, mCW+1, mCH+1);
+  }
+  ROOMS.forEach(function(rm){
+    var x=rm.c*mCW, y=rm.r*mCH, w=rm.w*mCW, h=rm.h*mCH;
+    var isTgt = rm.mi>=0 && rm.mi===mIdx, isDone = rm.mi>=0 && rm.mi<mIdx;
+    ctx.save();
+    ctx.fillStyle=rm.color; ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle = isTgt?'#f59e0b':isDone?'#16a34a':'#94a3b8';
+    ctx.lineWidth = isTgt?3:1.3;
+    ctx.strokeRect(x+1,y+1,w-2,h-2);
+    ctx.fillStyle='#1e293b'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='bold '+Math.max(10,Math.floor(Math.min(w,h)*0.34))+'px sans-serif';
+    ctx.fillText(rm.icon, x+w/2, y+h*0.38);
+    ctx.font='bold '+Math.max(8,Math.floor(Math.min(w,h)*0.15))+'px sans-serif';
+    ctx.fillText(rm.name, x+w/2, y+h*0.74);
+    ctx.restore();
+    if(isTgt){
+      ctx.save(); ctx.fillStyle='#dc2626'; ctx.font='bold '+Math.max(9,Math.floor(w*0.12))+'px sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('★ 목적지',x+w/2,y+2); ctx.restore();
+    } else if(isDone){
+      ctx.save(); ctx.fillStyle='#16a34a'; ctx.font='bold '+Math.max(12,Math.floor(w*0.18))+'px sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('✓',x+w-w*0.14,y+h*0.16); ctx.restore();
+    }
+  });
+  // 입구
+  var ex=(ENT_C-1)*mCW, ey=(PR-1)*mCH, ew=mCW*3, eh=mCH;
+  ctx.save();
+  ctx.fillStyle='rgba(217,164,65,.9)'; ctx.fillRect(ex,ey,ew,eh);
+  ctx.strokeStyle='#B0574A'; ctx.lineWidth=2; ctx.strokeRect(ex+1,ey+1,ew-2,eh-2);
+  ctx.fillStyle='#3b2a00'; ctx.font='bold '+Math.floor(Math.min(mCW,mCH)*0.62)+'px sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🚪 입구',ex+ew/2,ey+eh/2);
+  ctx.restore();
+  // 그려진 경로
+  if(mPts.length>1){
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(mPts[0].x,mPts[0].y);
+    for(var i=1;i<mPts.length;i++) ctx.lineTo(mPts[i].x,mPts[i].y);
+    ctx.strokeStyle='rgba(217,164,65,.55)'; ctx.lineWidth=Math.max(8,mCW*0.8); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+    ctx.strokeStyle='rgba(176,87,74,.95)'; ctx.lineWidth=Math.max(4,mCW*0.42); ctx.stroke();
+    ctx.restore();
+  }
+  var last=mPts[mPts.length-1];
+  ctx.save();
+  ctx.beginPath(); ctx.arc(last.x,last.y,mCW*0.55,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#B0574A'; ctx.lineWidth=2; ctx.stroke();
+  ctx.font='bold '+Math.floor(mCW*0.85)+'px sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🚶',last.x,last.y);
+  ctx.restore();
+}
+
+/* ════════════════════════════════════════════
+   글쓰기 · 수전증 따라쓰기
+   ════════════════════════════════════════════ */
+var WSTEPS=[
+  {type:'word',     text:'김철수',                    hint:'이름을 또박또박 따라 써보세요'},
+  {type:'word',     text:'노인복지관',                 hint:'기관 이름을 따라 써보세요'},
+  {type:'word',     text:'010-1234-5678',            hint:'전화번호를 따라 써보세요'},
+  {type:'sentence', text:'오늘 약을 먹었습니다.',       hint:'처방전에 서명하듯이'},
+  {type:'sentence', text:'식사 전에 복용하세요.',       hint:'약 봉투 안내문처럼'},
+  {type:'sentence', text:'오늘은 날씨가 무척 좋습니다.', hint:'문장을 또박또박 따라 써보세요'}
+];
+var W={step:0,level:0,drawing:false,drawn:false,strokes:0,devs:[],results:[],lastX:0,lastY:0};
+var wTimerInt=null, wTLeft=15;
+var wCvs,wCtx,W_CVS_H=220;
+var wTremor=makeTremor();
+
+function wStart(){
+  W.step=0; W.level=0; W.results=[];
+  document.getElementById('wSlider').value=0; onWSlider(0);
+  wInitCvs(); wBuildDots(); wLoadStep();
+}
+function onWSlider(v){
+  W.level=parseInt(v);
+  var b=document.getElementById('wBadge');
+  b.textContent=LV_LABEL[W.level]; b.className='lvbadge '+LV_CLASS[W.level];
+}
+function wStartTimer(sec){
+  wStopTimer(); wTLeft=sec||15; wUpdTimer();
+  wTimerInt=setInterval(function(){
+    wTLeft--; wUpdTimer();
+    if(wTLeft<=5 && wTLeft>0) wStartFlash();
+    if(wTLeft<=0){ wStopTimer(); wAutoNext(); }
+  },1000);
+}
+function wStopTimer(){ if(wTimerInt){clearInterval(wTimerInt); wTimerInt=null;} wStopFlash(); }
+function wUpdTimer(){
+  var el=document.getElementById('wtnum');
+  el.textContent=wTLeft;
+  el.classList.toggle('danger', wTLeft<=5 && wTLeft>0);
+  el.classList.toggle('blinking', wTLeft<=5 && wTLeft>0);
+}
+function wStartFlash(){ document.getElementById('red-flash-w').classList.add('on'); }
+function wStopFlash(){ document.getElementById('red-flash-w').classList.remove('on'); }
+function wAutoNext(){ wSaveResult(); if(W.step<WSTEPS.length-1){ W.step++; wLoadStep(); } else { wShowResult(); } }
+
+function wBuildDots(){
+  var wrap=document.getElementById('wsdots'); wrap.innerHTML='';
+  for(var i=0;i<WSTEPS.length;i++){
+    var d=document.createElement('div'); d.className='wsdot'+(i===0?' cur':''); d.id='wdot'+i; wrap.appendChild(d);
+    if(i===2){ var sep=document.createElement('div'); sep.style.cssText='width:1px;height:14px;background:var(--line);margin:0 4px;'; wrap.appendChild(sep); }
+  }
+}
+function wLoadStep(){
+  var s=WSTEPS[W.step];
+  for(var i=0;i<WSTEPS.length;i++){ var d=document.getElementById('wdot'+i); if(d) d.className='wsdot'+(i<W.step?' done':i===W.step?' cur':''); }
+  document.getElementById('wsinfo').innerHTML=(s.type==='word'?'📝 <b>단어 따라쓰기</b>':'✍️ <b>문장 따라쓰기</b>')+' &nbsp;&middot;&nbsp; '+(W.step+1)+' / '+WSTEPS.length+'단계';
+  document.getElementById('wstep-label').textContent=(s.type==='word'?'📝 단어 따라쓰기 — ':'✍️ 문장 따라쓰기 — ')+s.hint;
+  var gt=document.getElementById('wguide-text');
+  gt.textContent=s.text; gt.className='wcvs-guide-text'+(s.type==='sentence'?' sentence':'');
+  document.getElementById('wbtn-nxt').textContent=W.step<WSTEPS.length-1?'다음 →':'결과 보기 →';
+  wClearCvs(); wStartTimer(s.type==='sentence'?25:15);
+}
+function wNextStep(){ wSaveResult(); wStopTimer(); if(W.step<WSTEPS.length-1){ W.step++; wLoadStep(); } else { wShowResult(); } }
+function wSaveResult(){
+  var stab=wCalcStab();
+  var avgDev=W.devs.length>0?Math.round(W.devs.reduce(function(a,b){return a+b;},0)/W.devs.length):0;
+  W.results.push({stab:stab,avgDev:avgDev,strokes:W.strokes,level:W.level,timeout:wTLeft<=0});
+}
+function wInitCvs(){
+  wCvs=document.getElementById('wCvs');
+  var outer=document.getElementById('wcvs-outer');
+  wCvs.width=outer.clientWidth||340; wCvs.height=W_CVS_H;
+  wCvs.style.height=W_CVS_H+'px'; outer.style.height=W_CVS_H+'px';
+  wCtx=wCvs.getContext('2d'); wDrawBg();
+  wCvs.addEventListener('touchstart',function(e){ e.preventDefault(); var p=wGetTP(e.touches[0]); wStartDraw(p.x,p.y); },{passive:false});
+  wCvs.addEventListener('touchmove',function(e){ e.preventDefault(); if(!W.drawing) return; var p=wGetTP(e.touches[0]); wMoveDraw(p.x,p.y); },{passive:false});
+  wCvs.addEventListener('touchend',function(e){ e.preventDefault(); wEndDraw(); },{passive:false});
+  wCvs.addEventListener('mousedown',function(e){ var p=wGetMP(e); wStartDraw(p.x,p.y); });
+  wCvs.addEventListener('mousemove',function(e){ if(!W.drawing) return; var p=wGetMP(e); wMoveDraw(p.x,p.y); });
+  wCvs.addEventListener('mouseup',wEndDraw); wCvs.addEventListener('mouseleave',wEndDraw);
+}
+function wGetTP(t){ var r=wCvs.getBoundingClientRect(); return {x:(t.clientX-r.left)*(wCvs.width/r.width), y:(t.clientY-r.top)*(wCvs.height/r.height)}; }
+function wGetMP(e){ var r=wCvs.getBoundingClientRect(); return {x:(e.clientX-r.left)*(wCvs.width/r.width), y:(e.clientY-r.top)*(wCvs.height/r.height)}; }
+function wDrawBg(){
+  if(!wCtx) return;
+  var W_=wCvs.width, H_=wCvs.height;
+  wCtx.fillStyle='#fafafa'; wCtx.fillRect(0,0,W_,H_);
+  wCtx.strokeStyle='#dde3ee'; wCtx.lineWidth=1;
+  var baseY=Math.floor(H_*0.75);
+  wCtx.beginPath(); wCtx.moveTo(16,baseY); wCtx.lineTo(W_-16,baseY); wCtx.stroke();
+  wCtx.setLineDash([4,6]); wCtx.strokeStyle='#eef0f5';
+  var topY=Math.floor(H_*0.28);
+  wCtx.beginPath(); wCtx.moveTo(16,topY); wCtx.lineTo(W_-16,topY); wCtx.stroke();
+  wCtx.setLineDash([]);
+}
+function wClearCvs(){ W.strokes=0; W.devs=[]; W.drawn=false; W.drawing=false; wDrawBg(); document.getElementById('wempty-hint').style.display='block'; wUpdateStats(); }
+function wStartDraw(x,y){
+  W.drawing=true; var p=wTremor(x,y,W.level); W.lastX=p.x; W.lastY=p.y; W.strokes++; W.drawn=true;
+  document.getElementById('wempty-hint').style.display='none';
+  wCtx.beginPath(); wCtx.moveTo(W.lastX,W.lastY);
+}
+function wMoveDraw(x,y){
+  if(!W.drawing) return;
+  var p=wTremor(x,y,W.level);
+  if(p.dev!==undefined) W.devs.push(p.dev);
+  wCtx.lineTo(p.x,p.y);
+  wCtx.strokeStyle='#EEEAE2'; wCtx.lineWidth=2.4+W.level*0.15; wCtx.lineCap='round'; wCtx.lineJoin='round'; wCtx.stroke();
+  wCtx.beginPath(); wCtx.moveTo(p.x,p.y); W.lastX=p.x; W.lastY=p.y; wUpdateStats();
+}
+function wEndDraw(){ W.drawing=false; }
+function wCalcStab(){
+  if(W.devs.length===0) return 100;
+  var avg=W.devs.reduce(function(a,b){return a+b;},0)/W.devs.length;
+  return Math.max(0,Math.round(100-(avg/30)*100));
+}
+function wUpdateStats(){
+  var stab=wCalcStab();
+  var avgDev=W.devs.length>0?Math.round(W.devs.reduce(function(a,b){return a+b;},0)/W.devs.length):0;
+  document.getElementById('wsv-strokes').textContent=W.strokes;
+  var sv=document.getElementById('wsv-stab'); sv.textContent=stab; sv.className='wsval '+(stab>=80?'good':stab>=50?'warn':'bad');
+  var dv=document.getElementById('wsv-dev'); dv.textContent=avgDev+'px'; dv.className='wsval '+(avgDev<=3?'good':avgDev<=12?'warn':'bad');
+}
+function wShowResult(){
+  wStopTimer();
+  showScr('scr-write-result');
+  var rs=W.results; if(!rs.length) return;
+  var avgStab=Math.round(rs.reduce(function(a,r){return a+r.stab;},0)/rs.length);
+  var avgDev=Math.round(rs.reduce(function(a,r){return a+r.avgDev;},0)/rs.length);
+  var finalLv=rs[rs.length-1].level;
+  var timeouts=rs.filter(function(r){return r.timeout;}).length;
+  document.getElementById('w-r-stab').textContent=avgStab+'%';
+  document.getElementById('w-r-dev').textContent=avgDev+'px';
+  document.getElementById('w-r-lv').textContent=LV_LABEL[finalLv];
+  document.getElementById('w-r-steps').textContent=rs.length+'/'+WSTEPS.length;
+  document.getElementById('w-res-sub').textContent='평균 안정도 '+avgStab+'% · 시간초과 '+timeouts+'회';
+  var msgs=['정상 상태에서도 시간 안에 쓰기가 쉽지 않죠?<br>수전증 어르신은 이 어려움을 매일 겪으십니다.','경미한 떨림에서도 글씨가 흔들렸나요?<br>어르신들은 이 상태로 처방전 서명을 하셔야 합니다.','경미한 떨림이 조금 더 심해지면 선 하나 긋기도 조심스러워집니다.<br>서두르지 않게 기다려드리는 것이 큰 도움이 됩니다.','중등도 떨림에서는 글씨 쓰기가 매우 어렵습니다.<br>열쇠, 단추, 스마트폰 입력 모두 힘드십니다.','심한 수전증은 모든 일상 동작을 방해합니다.<br>식사, 세면, 옷 입기까지 어려우십니다.','매우 심한 수전증 — 어르신의 고충을 느끼셨나요?<br>이런 어르신을 더 세심하게 도와드려야 합니다.'];
+  document.getElementById('w-res-msg').innerHTML='💬 '+msgs[finalLv]+'<br><br><b>어르신을 도울 수 있는 방법:</b><ul style="margin-top:8px;"><li>서류 작성 시 대신 도와드리기</li><li>약 봉투 뜯기 · 알약 꺼내기 도움</li><li>서두르지 않도록 충분히 기다려드리기</li><li>손 잡아드리며 안심시켜드리기</li></ul>';
+}
+
+window.addEventListener('resize',function(){
+  if(document.getElementById('scr-maze').classList.contains('active')) initMaze();
+  if(document.getElementById('scr-write').classList.contains('active')) wInitCvs();
+});
 </script>
 </body>
 </html>
