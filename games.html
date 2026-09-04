@@ -1097,7 +1097,7 @@ function renderSubwayScreen(){
     rd.waypoints.forEach(function(s,i){
       var iconColor = subwayLineColor(s.line);
       var card=document.createElement('div'); card.className='subway-station-card';
-      card.innerHTML='<div style="font-size:10px;font-weight:800;color:#94a3b8;margin-bottom:2px;">'+labels[i]+'</div><div class="ss-icon" style="background:'+iconColor+';">🚇</div><div class="ss-name">'+s.name+'</div><div class="ss-fare">'+s.line+'</div>';
+      card.innerHTML='<div style="font-size:10px;font-weight:800;color:#94a3b8;margin-bottom:2px;">'+labels[i]+'</div><div class="ss-icon" style="background:'+iconColor+';">🚇</div><div class="ss-name">'+s.name+'</div><div class="ss-fare" style="color:'+iconColor+';font-weight:800;">'+s.line+'</div>';
       grid.appendChild(card);
     });
     c.appendChild(grid);
@@ -1162,13 +1162,14 @@ function renderSubwayScreen(){
       var isMid = i>0 && i<rd.waypoints.length-1;
       var dotColor = isMid ? '#64748b' : subwayLineColor(s.line);
       var dotText = isMid ? '⇄' : subwayLineColor(s.line)?(s.line.match(/\d+/)?s.line.match(/\d+/)[0]:'●'):'●';
-      htmlParts.push('<div class="subway-route-station"><div class="subway-route-dot" style="background:'+dotColor+';">'+dotText+'</div><div class="rs-name">'+s.name+'</div><div class="rs-line">'+s.line+'</div></div>');
+      var lineColor = subwayLineColor(s.line);
+      htmlParts.push('<div class="subway-route-station"><div class="subway-route-dot" style="background:'+dotColor+';">'+dotText+'</div><div class="rs-name">'+s.name+'</div><div class="rs-line" style="color:'+lineColor+';font-weight:800;">'+s.line+'</div></div>');
     });
     box.innerHTML = htmlParts.join('');
     c.appendChild(box);
     var info=document.createElement('div'); info.className='subway-info-list';
     var infoParts=[];
-    rd.waypoints.forEach(function(s,i){ infoParts.push('<div>• '+labels[i]+' : '+s.name+' ('+s.line+')</div>'); });
+    rd.waypoints.forEach(function(s,i){ infoParts.push('<div>• '+labels[i]+' : '+s.name+' (<span style="color:'+subwayLineColor(s.line)+';font-weight:800;">'+s.line+'</span>)</div>'); });
     info.innerHTML=infoParts.join('');
     c.appendChild(info);
     var row=document.createElement('div'); row.className='subway-back-row';
