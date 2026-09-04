@@ -1020,7 +1020,7 @@ function renderKioskScreen(){
 
 /* ── SUBWAY ROUTE FINDING ── */
 // 직접 그리는 노선도 - AI 이미지 대신 정확한 한글과 실제 호선 색상으로 전부 직접 그림
-var SUBWAY_LINE_COLOR={'1호선':'#0052A4','2호선':'#00A84D','3호선':'#EF7C1C','4호선':'#00A4E3','5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BDB092','경의중앙선':'#77C4A3','공항철도':'#0090D2'};
+var SUBWAY_LINE_COLOR={'1호선':'#0052A4','2호선':'#00A84D','3호선':'#EF7C1C','4호선':'#00A4E3','5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BDB092','경의중앙선':'#77C4A3','공항철도':'#0090D2','김포골드라인':'#A17800'};
 function subwayLineColor(line){
   if(!line) return '#2563eb';
   if(SUBWAY_LINE_COLOR[line]) return SUBWAY_LINE_COLOR[line];
