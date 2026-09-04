@@ -270,6 +270,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 
 <script>
 var G={game:'items',d:'normal',s:1};
+var lastVisD='normal'; // 복시장애→다른 질환 전환 시에도 캔버스를 다시 그려 유령상 잔상을 지우기 위한 이전 질환 추적
 var timerInt=null,tLeft=20;
 var curGroup='aging';
 var presbyopiaZoom=0.3;
@@ -567,11 +568,14 @@ function updateVisionOverlay(){
   if(cond.id==='accommodative') startFocusLagCycle(); else stopFocusLagCycle();
 
   // 복시장애의 캔버스 유령상은 실제로 캔버스를 다시 그려야 반영되므로,
-  // 질환/단계가 바뀔 때도 해당 캔버스를 다시 그려서 즉시 반영되게 함(복시장애일 때만, 불필요한 재그리기 방지)
-  if(cond.id==='diplopia'){
+  // 질환/단계가 바뀔 때도 해당 캔버스를 다시 그려서 즉시 반영되게 함.
+  // 복시장애로 "들어갈 때"뿐 아니라 "나갈 때"도 다시 그려야, 이미 캔버스 픽셀에 구워진
+  // 유령상 잔상이 다른 질환으로 바꿔도 그대로 남아있는 문제가 생기지 않는다.
+  if(cond.id==='diplopia' || lastVisD==='diplopia'){
     if(G.game==='items' && iCtx) drawItems();
     if(G.game==='subway' && subMapCtx) drawSubwayMap();
   }
+  lastVisD=cond.id;
 }
 
 // 복시장애(겹쳐보임)를 캔버스에 직접 그림 - 물건찾기/지하철처럼 캔버스가 낀 화면은
@@ -1016,11 +1020,15 @@ function renderKioskScreen(){
 
 /* ── SUBWAY ROUTE FINDING ── */
 // 직접 그리는 노선도 - AI 이미지 대신 정확한 한글과 실제 호선 색상으로 전부 직접 그림
-var SUBWAY_LINE_COLOR={'1호선':'#0052A4','2호선':'#00A84D','3호선':'#EF7C1C','4호선':'#00A4E3','5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BDB092'};
+var SUBWAY_LINE_COLOR={'1호선':'#0052A4','2호선':'#00A84D','3호선':'#EF7C1C','4호선':'#00A4E3','5호선':'#996CAC','6호선':'#CD7C2F','7호선':'#747F00','8호선':'#E6186C','9호선':'#BDB092','경의중앙선':'#77C4A3','공항철도':'#0090D2'};
 function subwayLineColor(line){
   if(!line) return '#2563eb';
-  var first=line.split('/')[0].trim();
-  return SUBWAY_LINE_COLOR[first]||'#2563eb';
+  if(SUBWAY_LINE_COLOR[line]) return SUBWAY_LINE_COLOR[line];
+  // 환승역은 '1·2호선'처럼 가운뎃점(·)으로 여러 호선의 번호만 합쳐 표기(숫자마다 "호선"이 붙지 않음)하므로,
+  // 문자열의 첫 숫자를 뽑아 그 호선 색을 대표로 사용
+  var m=line.match(/\d+/);
+  if(m) return SUBWAY_LINE_COLOR[m[0]+'호선']||'#2563eb';
+  return '#2563eb';
 }
 
 // 실제 노선도 사진을 배경으로 사용
