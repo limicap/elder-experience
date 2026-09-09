@@ -194,9 +194,9 @@ input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;ba
         <canvas id="mazeCvs"></canvas>
       </div>
     </div>
-    <div class="maze-hint">&#128070; 입구에서부터 손끝으로 길을 따라 그어보세요 &middot; 떨림 때문에 손끝이 흔들려요</div>
+    <div class="maze-hint">&#128070; 입구에서부터 목표 방까지 손끝으로 길을 따라 그어보세요 &middot; 다른 방에 들어가면 처음부터 다시예요</div>
     <div class="maze-stats">
-      <div class="mstat"><div class="mv" id="mvHits">0</div><div class="ml">벽 부딪힘</div></div>
+      <div class="mstat"><div class="mv" id="mvHits">0</div><div class="ml">다른 방으로 잘못 감</div></div>
       <div class="mstat"><div class="mv" id="mvDone">0/5</div><div class="ml">완료한 곳</div></div>
     </div>
     <button class="mrestart" onclick="restartMaze()">처음부터 다시</button>
@@ -316,31 +316,52 @@ function makeTremor(){
    접수·수납→채혈실→진료실1→방사선과→약국
    ════════════════════════════════════════════ */
 var PR=30, PC=30;
-var MISSIONS=[
-  {n:'접수·수납',ic:'📋'},{n:'채혈실',ic:'🩸'},{n:'진료실1',ic:'🩺'},
-  {n:'방사선과',ic:'🫁'},{n:'약국',ic:'💊'}
-];
-var DOORS={0:{r:23,c:8},1:{r:5,c:8},2:{r:5,c:14},3:{r:5,c:20},4:{r:17,c:14}};
 var ROOMS=[
-  {r:1, c:1,  w:4, h:4, icon:'🚻', name:'화장실',    color:'#dbeafe', mi:-1},
-  {r:1, c:7,  w:4, h:4, icon:'🩸', name:'채혈실',    color:'#fee2e2', mi:1},
-  {r:1, c:13, w:4, h:4, icon:'🩺', name:'진료실1',   color:'#d1fae5', mi:2},
-  {r:1, c:19, w:4, h:4, icon:'🫁', name:'방사선과',  color:'#ede9fe', mi:3},
-  {r:1, c:25, w:4, h:4, icon:'✚',  name:'내과',      color:'#dbeafe', mi:-1},
-  {r:7, c:1,  w:4, h:4, icon:'💉', name:'주사실',    color:'#dbeafe', mi:-1},
-  {r:7, c:13, w:4, h:4, icon:'🛋', name:'대기실',    color:'#fdf1e3', mi:-1},
-  {r:7, c:17, w:4, h:4, icon:'🩺', name:'진료실2',   color:'#fde4cf', mi:-1},
-  {r:7, c:25, w:4, h:4, icon:'👁', name:'안과',      color:'#d1fae5', mi:-1},
-  {r:13,c:1,  w:4, h:4, icon:'🤝', name:'상담실',    color:'#dcfce7', mi:-1},
-  {r:13,c:13, w:4, h:4, icon:'💊', name:'약국',      color:'#fce7f3', mi:4},
-  {r:13,c:25, w:4, h:4, icon:'🛗', name:'엘리베이터',color:'#e2e8f0', mi:-1},
-  {r:19,c:7,  w:4, h:4, icon:'📋', name:'접수·수납', color:'#bbf7d0', mi:0},
-  {r:19,c:19, w:4, h:4, icon:'🦴', name:'정형외과',  color:'#dbeafe', mi:-1}
+  {r:1, c:1,  w:4, h:4, icon:'🚻', name:'화장실',    color:'#dbeafe'},
+  {r:1, c:7,  w:4, h:4, icon:'🩸', name:'채혈실',    color:'#fee2e2'},
+  {r:1, c:13, w:4, h:4, icon:'🩺', name:'진료실1',   color:'#d1fae5'},
+  {r:1, c:19, w:4, h:4, icon:'🫁', name:'방사선과',  color:'#ede9fe'},
+  {r:1, c:25, w:4, h:4, icon:'✚',  name:'내과',      color:'#dbeafe'},
+  {r:7, c:1,  w:4, h:4, icon:'💉', name:'주사실',    color:'#dbeafe'},
+  {r:7, c:13, w:4, h:4, icon:'🛋', name:'대기실',    color:'#fdf1e3'},
+  {r:7, c:17, w:4, h:4, icon:'🩺', name:'진료실2',   color:'#fde4cf'},
+  {r:7, c:25, w:4, h:4, icon:'👁', name:'안과',      color:'#d1fae5'},
+  {r:13,c:1,  w:4, h:4, icon:'🤝', name:'상담실',    color:'#dcfce7'},
+  {r:13,c:13, w:4, h:4, icon:'💊', name:'약국',      color:'#fce7f3'},
+  {r:13,c:25, w:4, h:4, icon:'🛗', name:'엘리베이터',color:'#e2e8f0'},
+  {r:19,c:7,  w:4, h:4, icon:'📋', name:'접수·수납', color:'#bbf7d0'},
+  {r:19,c:19, w:4, h:4, icon:'🦴', name:'정형외과',  color:'#dbeafe'}
 ];
+// 목표 세트 3개 — 다시 도전할 때마다 다른 목표로 바뀜. 손떨림 강도는
+// 세트 안에서 뒤로 갈수록(=마지막 레벨일수록) 슬라이더로 고른 값까지 점점 세짐.
+var MISSION_SETS=[
+  ['접수·수납','채혈실','진료실1','방사선과','약국'],
+  ['접수·수납','주사실','대기실','안과','엘리베이터'],
+  ['접수·수납','상담실','내과','정형외과','화장실']
+];
+var MISSIONS=[];
 var ENT_R=29, ENT_C=8;
 
-var mCvs,mCtx,mCW,mCH,mMap,mPts,mDraw,mIdx,mHits,mDone,mBombActive,mLevel=0;
+var mCvs,mCtx,mCW,mCH,mMap,mPts,mJitPt,mDraw,mIdx,mHits,mDone,mBombActive,mLevel=0,mMaxLevel=0,mSetIdx=-1;
 var mTremor=makeTremor();
+
+function mBuildMissionSet(){
+  mSetIdx=(mSetIdx+1)%MISSION_SETS.length;
+  MISSIONS=MISSION_SETS[mSetIdx].map(function(nm){
+    var rm=ROOMS.filter(function(r){ return r.name===nm; })[0];
+    return {n:nm, ic:rm.icon};
+  });
+  ROOMS.forEach(function(rm){
+    rm.mi=-1;
+    MISSIONS.forEach(function(m,i){ if(m.n===rm.name) rm.mi=i; });
+  });
+}
+// 목표 단계가 올라갈수록(mIdx) 손떨림도 슬라이더로 고른 최고 강도까지 점점 세짐
+function mStageLevel(idx){
+  if(mMaxLevel<=0) return 0;
+  var i=Math.min(idx,MISSIONS.length-1);
+  return Math.min(mMaxLevel,Math.round(mMaxLevel*i/(MISSIONS.length-1)));
+}
 
 function buildMazeMap(){
   mMap=[];
@@ -366,9 +387,10 @@ function buildMazeMap(){
 }
 
 function initMaze(){
-  mIdx=0; mHits=0; mBombActive=false; mDraw=false;
+  mIdx=0; mHits=0; mBombActive=false; mDraw=false; mJitPt=null;
+  mBuildMissionSet();
   buildMazeMap();
-  document.getElementById('mSlider').value=0; onMSlider(0);
+  document.getElementById('mSlider').value=2; onMSlider(2);
   document.getElementById('mvHits').textContent='0';
   document.getElementById('mvDone').textContent='0/'+MISSIONS.length;
   document.getElementById('mazeVictory').classList.remove('show');
@@ -387,7 +409,11 @@ function initMaze(){
 }
 function restartMaze(){ document.getElementById('mazeVictory').classList.remove('show'); initMaze(); }
 function onMSlider(v){
-  mLevel=parseInt(v);
+  mMaxLevel=parseInt(v);
+  mUpdMLevel();
+}
+function mUpdMLevel(){
+  mLevel=mStageLevel(mIdx);
   var b=document.getElementById('mBadge');
   b.textContent=LV_LABEL[mLevel]; b.className='lvbadge '+LV_CLASS[mLevel];
 }
@@ -397,28 +423,43 @@ function mPtc(clientX,clientY){
   var x=(clientX-rect.left)*sx, y=(clientY-rect.top)*sy;
   return {x:x,y:y,r:Math.floor(y/mCH),c:Math.floor(x/mCW)};
 }
-function mCellWall(r,c){ if(r<0||r>=PR||c<0||c>=PC) return true; return mMap[r][c]===1; }
+function mRoomAt(r,c){
+  for(var i=0;i<ROOMS.length;i++){
+    var rm=ROOMS[i];
+    if(r>=rm.r && r<rm.r+rm.h && c>=rm.c && c<rm.c+rm.w) return rm;
+  }
+  return null;
+}
 function mHandleMove(clientX,clientY){
   if(!mDraw||mBombActive) return;
   var raw=mPtc(clientX,clientY);
+  if(raw.r<0||raw.r>=PR||raw.c<0||raw.c>=PC) return;
   var j=mTremor(raw.x,raw.y,mLevel);
-  var p={x:j.x,y:j.y,r:Math.floor(j.y/mCH),c:Math.floor(j.x/mCW)};
-  if(p.r<0||p.r>=PR||p.c<0||p.c>=PC) return;
-  if(mCellWall(p.r,p.c)){
-    var nb=[mCellWall(p.r-1,p.c),mCellWall(p.r+1,p.c),mCellWall(p.r,p.c-1),mCellWall(p.r,p.c+1)];
-    var allWall=nb.every(function(v){return v;});
-    if(allWall){
-      mDraw=false; mHits++; document.getElementById('mvHits').textContent=mHits;
-      mTriggerBomb(p.x,p.y,function(){
-        mPts=[{x:ENT_C*mCW+mCW/2,y:ENT_R*mCH+mCH/2,r:ENT_R,c:ENT_C}];
-        drawMaze();
-      });
-      return;
-    }
+  mJitPt={x:j.x,y:j.y};
+  // 목적지 도착/오답 판정은 흔들림이 섞이지 않은 실제 손끝(raw) 좌표로 한다 —
+  // 손떨림 때문에 도착이 씹히거나 도착 직전에 실패 처리되는 문제를 막기 위함.
+  var hitRoom=mRoomAt(raw.r,raw.c);
+  if(hitRoom && hitRoom.mi===mIdx){
+    mChkArriveSuccess();
+    var last0=mPts[mPts.length-1];
+    if(raw.r!==last0.r||raw.c!==last0.c) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
+    drawMaze();
+    return;
+  }
+  // 이미 완료한 방을 다시 지나가는 건 실패가 아니다 — 정답이 아니면서
+  // "완료 전" 방(장식용 방 포함, 아직 안 간 다른 미션 방 포함)만 오답 처리.
+  if(hitRoom && !(hitRoom.mi>=0 && hitRoom.mi<mIdx)){
+    mDraw=false; mHits++; document.getElementById('mvHits').textContent=mHits;
+    mTriggerFail(j.x,j.y,hitRoom.name,function(){
+      mPts=[{x:ENT_C*mCW+mCW/2,y:ENT_R*mCH+mCH/2,r:ENT_R,c:ENT_C}];
+      mJitPt=null;
+      drawMaze();
+    });
+    return;
   }
   var last=mPts[mPts.length-1];
-  if(p.r!==last.r||p.c!==last.c) mPts.push({x:p.x,y:p.y,r:p.r,c:p.c});
-  drawMaze(); mChkArrive(p.r,p.c);
+  if(raw.r!==last.r||raw.c!==last.c) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
+  drawMaze();
 }
 (function(){
   var cvs;
@@ -442,37 +483,36 @@ function mHandleMove(clientX,clientY){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind();
 })();
-function mTriggerBomb(bx,by,onDone){
+function mTriggerFail(bx,by,roomName,onDone){
   mBombActive=true; var frame=0,total=20;
+  mazeToast('❌ 여기는 '+roomName+'이에요! 처음부터 다시');
   function anim(){
     drawMaze();
     var prog=frame/total, maxR=Math.max(mCW,mCH)*3;
     var r=maxR*Math.sin(prog*Math.PI), al=1-prog, ctx=mCtx;
     ctx.save();
     var grd=ctx.createRadialGradient(bx,by,0,bx,by,r);
-    grd.addColorStop(0,'rgba(255,200,0,'+(al*0.9)+')'); grd.addColorStop(0.3,'rgba(255,120,40,'+(al*0.8)+')');
+    grd.addColorStop(0,'rgba(255,90,90,'+(al*0.9)+')'); grd.addColorStop(0.3,'rgba(220,38,38,'+(al*0.8)+')');
     grd.addColorStop(0.6,'rgba(176,87,74,'+(al*0.5)+')'); grd.addColorStop(1,'rgba(176,87,74,0)');
     ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2); ctx.fill();
     var sz=Math.max(16,Math.floor(Math.min(mCW,mCH)*3*(1-prog*0.4)));
     ctx.font=sz+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.globalAlpha=Math.min(1,al*1.5); ctx.fillText('💥',bx,by); ctx.globalAlpha=1;
+    ctx.globalAlpha=Math.min(1,al*1.5); ctx.fillText('❌',bx,by); ctx.globalAlpha=1;
     ctx.restore();
     frame++; if(frame<=total) requestAnimationFrame(anim); else { mBombActive=false; onDone(); }
   }
   requestAnimationFrame(anim);
 }
-function mChkArrive(r,c){
+function mChkArriveSuccess(){
   if(mIdx>=MISSIONS.length) return;
-  var door=DOORS[mIdx]; if(!door) return;
-  if(Math.abs(r-door.r)<=1 && Math.abs(c-door.c)<=1){
-    var nm=MISSIONS[mIdx].n; mIdx++;
-    document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
-    updMazeMbar();
-    if(mIdx>=MISSIONS.length){
-      setTimeout(showMazeVictory,300);
-    } else {
-      mazeToast('🎉 LEVEL '+mIdx+' 클리어! ('+nm+' 도착)');
-    }
+  var nm=MISSIONS[mIdx].n; mIdx++;
+  document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
+  mUpdMLevel();
+  updMazeMbar();
+  if(mIdx>=MISSIONS.length){
+    setTimeout(showMazeVictory,300);
+  } else {
+    mazeToast('🎉 LEVEL '+mIdx+' 클리어! ('+nm+' 도착)');
   }
 }
 function mazeToast(msg){
@@ -483,7 +523,7 @@ function mazeToast(msg){
   setTimeout(function(){ t.remove(); },1600);
 }
 function showMazeVictory(){
-  document.getElementById('mazeVictoryMsg').innerHTML='접수·수납부터 약국까지<br>흔들리는 손으로 모두 찾아가셨습니다!<br><br>벽에 <b>'+mHits+'번</b> 부딪히셨어요.';
+  document.getElementById('mazeVictoryMsg').innerHTML='흔들리는 손으로 목적지를 모두 찾아가셨습니다!<br><br>다른 방으로 <b>'+mHits+'번</b> 잘못 들어가셨어요.';
   document.getElementById('mazeVictory').classList.add('show');
 }
 function updMazeMbar(){
@@ -552,7 +592,8 @@ function drawMaze(){
   ctx.moveTo(ex+ew/2-mCW*0.35, ey+eh*0.9); ctx.lineTo(ex+ew/2+mCW*0.35, ey+eh*0.9); ctx.lineTo(ex+ew/2, ey+eh*0.6);
   ctx.closePath(); ctx.fillStyle='#2563eb'; ctx.fill();
   ctx.restore();
-  // 그려진 경로
+  // 그려진 경로 — 손끝(raw)이 실제로 지나온 자리를 그대로 그려서 선이
+  // 또렷하게 보이게 하고, 떨림은 아래 손끝 표시로 따로 보여준다.
   if(mPts.length>1){
     ctx.save();
     ctx.beginPath(); ctx.moveTo(mPts[0].x,mPts[0].y);
@@ -562,11 +603,24 @@ function drawMaze(){
     ctx.restore();
   }
   var last=mPts[mPts.length-1];
+  var cur=mJitPt||{x:last.x,y:last.y};
+  // 떨리는 손끝 표시 — 실제 경로선(last)과 흔들린 위치(cur)를 가는 선으로
+  // 이어서, 손가락에 가려도 얼마나 떨리는지 눈에 띄게 보여준다.
+  if(mLevel>0){
+    ctx.save();
+    ctx.strokeStyle='rgba(220,38,38,.5)'; ctx.lineWidth=Math.max(1.5,mCW*0.12); ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(cur.x,cur.y); ctx.stroke();
+    ctx.restore();
+  }
   ctx.save();
-  ctx.beginPath(); ctx.arc(last.x,last.y,mCW*0.55,0,Math.PI*2);
-  ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle='#B0574A'; ctx.lineWidth=2; ctx.stroke();
+  var pulse=1+0.06*Math.sin(Date.now()/90);
+  ctx.beginPath(); ctx.arc(cur.x,cur.y,mCW*0.7*pulse,0,Math.PI*2);
+  ctx.fillStyle=mLevel>0?'rgba(220,38,38,.16)':'rgba(37,99,235,.14)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cur.x,cur.y,mCW*0.55,0,Math.PI*2);
+  ctx.fillStyle='#fff'; ctx.fill();
+  ctx.strokeStyle=mLevel>0?'#dc2626':'#2563eb'; ctx.lineWidth=2.4; ctx.stroke();
   ctx.font='bold '+Math.floor(mCW*0.85)+'px sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🚶',last.x,last.y);
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🖐️',cur.x,cur.y);
   ctx.restore();
 }
 
