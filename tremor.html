@@ -316,7 +316,9 @@ var ROOMS=[
   {r:9, c:3,  w:4, h:5, icon:'💉', name:'주사실',    color:'#dbeafe', mi:-1},
   {r:14,c:3,  w:4, h:5, icon:'🤝', name:'상담실',    color:'#dcfce7', mi:-1},
   {r:14,c:7,  w:5, h:5, icon:'📋', name:'접수·수납', color:'#bbf7d0', mi:0},
-  {r:14,c:12, w:4, h:5, icon:'💊', name:'약국',      color:'#fce7f3', mi:4}
+  {r:14,c:12, w:4, h:5, icon:'💊', name:'약국',      color:'#fce7f3', mi:4},
+  {r:9, c:7,  w:5, h:5, icon:'🛋', name:'대기실',    color:'#fdf1e3', mi:-1},
+  {r:9, c:12, w:4, h:5, icon:'🩺', name:'진료실2',   color:'#fde4cf', mi:-1}
 ];
 var ENT_R=20, ENT_C=10;
 
@@ -507,8 +509,11 @@ function drawMaze(){
   ctx.save();
   ctx.fillStyle='rgba(217,164,65,.9)'; ctx.fillRect(ex,ey,ew,eh);
   ctx.strokeStyle='#B0574A'; ctx.lineWidth=2; ctx.strokeRect(ex+1,ey+1,ew-2,eh-2);
-  ctx.fillStyle='#3b2a00'; ctx.font='bold '+Math.floor(Math.min(mCW,mCH)*0.62)+'px sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🚪 입구',ex+ew/2,ey+eh/2);
+  ctx.fillStyle='#3b2a00'; ctx.font='bold '+Math.floor(Math.min(mCW,mCH)*0.55)+'px sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🚪 입구',ex+ew/2,ey+eh*0.32);
+  ctx.beginPath();
+  ctx.moveTo(ex+ew/2-mCW*0.35, ey+eh*0.9); ctx.lineTo(ex+ew/2+mCW*0.35, ey+eh*0.9); ctx.lineTo(ex+ew/2, ey+eh*0.6);
+  ctx.closePath(); ctx.fillStyle='#2563eb'; ctx.fill();
   ctx.restore();
   // 그려진 경로
   if(mPts.length>1){
