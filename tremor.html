@@ -56,12 +56,18 @@ input[type=range]{ flex:1; height:6px; -webkit-appearance:none; appearance:none;
 input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:#fff; border:3px solid var(--brick); cursor:pointer; }
 input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--brick);cursor:pointer; }
 .lvbadge{ min-width:64px; text-align:center; font-size:12.5px; font-weight:800; padding:4px 10px; border-radius:20px; background:var(--bg-panel-2); flex-shrink:0; }
-.lvbadge.lv0{ color:#9AC28E; } .lvbadge.lv1{ color:#B7D19E; } .lvbadge.lv2{ color:var(--amber); }
-.lvbadge.lv3{ color:#e0a15a; } .lvbadge.lv4{ color:#d9793f; } .lvbadge.lv5{ color:var(--brick); }
+.lvbadge.lv0{ color:#9AC28E; } .lvbadge.lv1{ color:var(--amber); } .lvbadge.lv2{ color:var(--brick); }
 
 .gbody{ flex:1; display:flex; flex-direction:column; gap:12px; padding:0 16px 20px; overflow-y:auto; }
 
 /* ---------- maze ---------- */
+.mgoal{ display:flex; align-items:center; gap:12px; background:linear-gradient(135deg, rgba(217,164,65,.22), rgba(217,164,65,.07)); border:1.5px solid var(--amber); border-radius:14px; padding:12px 16px; }
+.mgoal-icon{ font-size:26px; flex-shrink:0; }
+.mgoal-body{ flex:1; min-width:0; }
+.mgoal-level{ font-size:11px; font-weight:800; color:var(--amber); letter-spacing:.04em; }
+.mgoal-text{ font-size:16px; font-weight:800; color:var(--ink); margin-top:1px; }
+.mgoal.done{ border-color:var(--sage); background:linear-gradient(135deg, rgba(122,148,113,.25), rgba(122,148,113,.08)); }
+.mgoal.done .mgoal-level{ color:#9AC28E; }
 .mbar{ display:flex; align-items:center; gap:2px; overflow-x:auto; background:var(--bg-panel); border:1px solid var(--line); border-radius:14px; padding:10px 12px; -webkit-overflow-scrolling:touch; }
 .mbar::-webkit-scrollbar{ display:none; }
 .mstep{ display:flex; flex-direction:column; align-items:center; gap:4px; flex-shrink:0; min-width:52px; }
@@ -170,11 +176,18 @@ input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;ba
   <div class="lvbar">
     <div class="lvrow">
       <span class="lvlabel">떨림 강도</span>
-      <input type="range" id="mSlider" min="0" max="5" value="0" oninput="onMSlider(this.value)">
+      <input type="range" id="mSlider" min="0" max="2" value="0" oninput="onMSlider(this.value)">
       <span class="lvbadge lv0" id="mBadge">정상</span>
     </div>
   </div>
   <div class="gbody">
+    <div class="mgoal" id="mGoal">
+      <div class="mgoal-icon" id="mGoalIcon">📋</div>
+      <div class="mgoal-body">
+        <div class="mgoal-level" id="mGoalLevel">LEVEL 1 / 5</div>
+        <div class="mgoal-text" id="mGoalText">접수·수납으로 가세요</div>
+      </div>
+    </div>
     <div class="mbar" id="mMbar"></div>
     <div class="maze-map-card">
       <div class="maze-map-area" id="mazeMapArea">
@@ -213,7 +226,7 @@ input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;ba
   <div class="lvbar">
     <div class="lvrow">
       <span class="lvlabel">떨림 강도</span>
-      <input type="range" id="wSlider" min="0" max="5" value="0" oninput="onWSlider(this.value)">
+      <input type="range" id="wSlider" min="0" max="2" value="0" oninput="onWSlider(this.value)">
       <span class="lvbadge lv0" id="wBadge">정상</span>
     </div>
   </div>
@@ -276,11 +289,11 @@ function goMaze(){ showScr('scr-maze'); initMaze(); }
 function goWrite(){ showScr('scr-write'); wStart(); }
 
 /* ════════════════════════════════════════════
-   공통 손떨림 수치 (6단계)
+   공통 손떨림 수치 (정상 / 경증 / 중증 3단계)
    ════════════════════════════════════════════ */
-var LV_LABEL=['정상','경미','경미+','중등도','심함','매우심함'];
-var LV_CLASS=['lv0','lv1','lv2','lv3','lv4','lv5'];
-var LV_AMP=[0,2.5,6,12,20,30];
+var LV_LABEL=['정상','경증','중증'];
+var LV_CLASS=['lv0','lv1','lv2'];
+var LV_AMP=[0,10,26];
 function makeTremor(){
   var noiseT=0;
   return function(x,y,level){
@@ -296,33 +309,35 @@ function makeTremor(){
 
 /* ════════════════════════════════════════════
    미로 통과 · 병원 길찾기
-   22x22 격자 — 바깥 테두리 복도(회랑) + 가운데를 가로지르는 복도 하나를
-   더해서 약국은 반드시 가운데 복도로 들어가야 닿을 수 있게 만든 구조.
+   30x30 "city block" 격자 — 방은 전부 독립된 블록으로 사방이 복도로
+   띄워져 있고, 바깥 테두리가 아니라 안쪽 복도망(가로 4줄 + 세로 4줄)을
+   통해서만 서로 연결됨. 대기실·진료실2만 예외로 서로 붙여뒀고 나머지는
+   전부 사이를 띄워 복도를 두었음.
    접수·수납→채혈실→진료실1→방사선과→약국
    ════════════════════════════════════════════ */
-var PR=22, PC=22;
+var PR=30, PC=30;
 var MISSIONS=[
   {n:'접수·수납',ic:'📋'},{n:'채혈실',ic:'🩸'},{n:'진료실1',ic:'🩺'},
   {n:'방사선과',ic:'🫁'},{n:'약국',ic:'💊'}
 ];
-var DOORS={0:{r:19,c:10},1:{r:2,c:7},2:{r:2,c:11},3:{r:2,c:14},4:{r:10,c:14}};
+var DOORS={0:{r:23,c:8},1:{r:5,c:8},2:{r:5,c:14},3:{r:5,c:20},4:{r:17,c:14}};
 var ROOMS=[
-  {r:3, c:3,  w:3, h:6, icon:'🚻', name:'화장실',    color:'#dbeafe', mi:-1},
-  {r:3, c:6,  w:3, h:6, icon:'🩸', name:'채혈실',    color:'#fee2e2', mi:1},
-  {r:3, c:9,  w:4, h:6, icon:'🩺', name:'진료실1',   color:'#d1fae5', mi:2},
-  {r:3, c:13, w:3, h:6, icon:'🫁', name:'방사선과',  color:'#ede9fe', mi:3},
-  {r:3, c:16, w:3, h:6, icon:'✚',  name:'내과',      color:'#dbeafe', mi:-1},
-  {r:11,c:16, w:3, h:3, icon:'👁', name:'안과',      color:'#d1fae5', mi:-1},
-  {r:14,c:16, w:3, h:2, icon:'🛗', name:'엘리베이터',color:'#e2e8f0', mi:-1},
-  {r:16,c:16, w:3, h:3, icon:'🦴', name:'정형외과',  color:'#dbeafe', mi:-1},
-  {r:11,c:3,  w:3, h:4, icon:'💉', name:'주사실',    color:'#dbeafe', mi:-1},
-  {r:15,c:3,  w:3, h:4, icon:'🤝', name:'상담실',    color:'#dcfce7', mi:-1},
-  {r:15,c:8,  w:5, h:4, icon:'📋', name:'접수·수납', color:'#bbf7d0', mi:0},
-  {r:11,c:7,  w:3, h:4, icon:'🛋', name:'대기실',    color:'#fdf1e3', mi:-1},
-  {r:11,c:10, w:3, h:4, icon:'🩺', name:'진료실2',   color:'#fde4cf', mi:-1},
-  {r:11,c:13, w:3, h:4, icon:'💊', name:'약국',      color:'#fce7f3', mi:4}
+  {r:1, c:1,  w:4, h:4, icon:'🚻', name:'화장실',    color:'#dbeafe', mi:-1},
+  {r:1, c:7,  w:4, h:4, icon:'🩸', name:'채혈실',    color:'#fee2e2', mi:1},
+  {r:1, c:13, w:4, h:4, icon:'🩺', name:'진료실1',   color:'#d1fae5', mi:2},
+  {r:1, c:19, w:4, h:4, icon:'🫁', name:'방사선과',  color:'#ede9fe', mi:3},
+  {r:1, c:25, w:4, h:4, icon:'✚',  name:'내과',      color:'#dbeafe', mi:-1},
+  {r:7, c:1,  w:4, h:4, icon:'💉', name:'주사실',    color:'#dbeafe', mi:-1},
+  {r:7, c:13, w:4, h:4, icon:'🛋', name:'대기실',    color:'#fdf1e3', mi:-1},
+  {r:7, c:17, w:4, h:4, icon:'🩺', name:'진료실2',   color:'#fde4cf', mi:-1},
+  {r:7, c:25, w:4, h:4, icon:'👁', name:'안과',      color:'#d1fae5', mi:-1},
+  {r:13,c:1,  w:4, h:4, icon:'🤝', name:'상담실',    color:'#dcfce7', mi:-1},
+  {r:13,c:13, w:4, h:4, icon:'💊', name:'약국',      color:'#fce7f3', mi:4},
+  {r:13,c:25, w:4, h:4, icon:'🛗', name:'엘리베이터',color:'#e2e8f0', mi:-1},
+  {r:19,c:7,  w:4, h:4, icon:'📋', name:'접수·수납', color:'#bbf7d0', mi:0},
+  {r:19,c:19, w:4, h:4, icon:'🦴', name:'정형외과',  color:'#dbeafe', mi:-1}
 ];
-var ENT_R=20, ENT_C=10;
+var ENT_R=29, ENT_C=8;
 
 var mCvs,mCtx,mCW,mCH,mMap,mPts,mDraw,mIdx,mHits,mDone,mBombActive,mLevel=0;
 var mTremor=makeTremor();
@@ -333,11 +348,17 @@ function buildMazeMap(){
   function openRect(r1,r2,c1,c2){
     for(var rr=r1;rr<=r2;rr++) for(var cc=c1;cc<=c2;cc++) mMap[rr][cc]=0;
   }
-  openRect(1,2,1,20);   // 위쪽 복도
-  openRect(19,20,1,20); // 아래쪽 복도
-  openRect(1,20,1,2);   // 왼쪽 복도
-  openRect(1,20,19,20); // 오른쪽 복도
-  openRect(9,10,2,19);  // 가운데를 가로지르는 복도 — 약국은 이 복도를 통해서만 갈 수 있음
+  // 방이 놓이는 4개의 가로 띠와, 그 사이사이 복도 4줄을 전부 열어둔 뒤
+  // 방 자리만 다시 벽으로 덮는다 — 방이 없는 칸은 자동으로 복도(광장)가 된다.
+  openRect(1,4,   1,28); // 1행 방 띠
+  openRect(5,6,   1,28); // 복도
+  openRect(7,10,  1,28); // 2행 방 띠
+  openRect(11,12, 1,28); // 복도
+  openRect(13,16, 1,28); // 3행 방 띠
+  openRect(17,18, 1,28); // 복도
+  openRect(19,22, 1,28); // 4행 방 띠
+  openRect(23,24, 1,28); // 복도
+  openRect(25,29, 7,10); // 입구로 이어지는 복도
   ROOMS.forEach(function(rm){
     for(var rr=rm.r; rr<rm.r+rm.h; rr++) for(var cc=rm.c; cc<rm.c+rm.w; cc++)
       if(rr>=0&&rr<PR&&cc>=0&&cc<PC) mMap[rr][cc]=1;
@@ -450,7 +471,7 @@ function mChkArrive(r,c){
     if(mIdx>=MISSIONS.length){
       setTimeout(showMazeVictory,300);
     } else {
-      mazeToast(nm+' 도착! 다음 목적지로 이동하세요');
+      mazeToast('🎉 LEVEL '+mIdx+' 클리어! ('+nm+' 도착)');
     }
   }
 }
@@ -475,6 +496,19 @@ function updMazeMbar(){
     var name=document.createElement('div'); name.className='mname'+(i===mIdx?' active-name':''); name.textContent=m.n;
     step.appendChild(dot); step.appendChild(name); bar.appendChild(step);
   });
+  updMazeGoal();
+}
+function updMazeGoal(){
+  var goal=document.getElementById('mGoal'); if(!goal) return;
+  var icon=document.getElementById('mGoalIcon'), lvl=document.getElementById('mGoalLevel'), txt=document.getElementById('mGoalText');
+  if(mIdx>=MISSIONS.length){
+    goal.classList.add('done');
+    icon.textContent='🏆'; lvl.textContent='CLEAR'; txt.textContent='모든 목표를 다 찾아가셨습니다!';
+  } else {
+    goal.classList.remove('done');
+    var m=MISSIONS[mIdx];
+    icon.textContent=m.ic; lvl.textContent='LEVEL '+(mIdx+1)+' / '+MISSIONS.length; txt.textContent=m.n+'(으)로 가세요';
+  }
 }
 function drawMaze(){
   if(!mCtx) return;
