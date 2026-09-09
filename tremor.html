@@ -296,29 +296,31 @@ function makeTremor(){
 
 /* ════════════════════════════════════════════
    미로 통과 · 병원 길찾기
-   (28x28 대신 22x22 회랑형 격자 — 접수·수납→채혈실→진료실1→방사선과→약국)
+   22x22 격자 — 바깥 테두리 복도(회랑) + 가운데를 가로지르는 복도 하나를
+   더해서 약국은 반드시 가운데 복도로 들어가야 닿을 수 있게 만든 구조.
+   접수·수납→채혈실→진료실1→방사선과→약국
    ════════════════════════════════════════════ */
 var PR=22, PC=22;
 var MISSIONS=[
   {n:'접수·수납',ic:'📋'},{n:'채혈실',ic:'🩸'},{n:'진료실1',ic:'🩺'},
   {n:'방사선과',ic:'🫁'},{n:'약국',ic:'💊'}
 ];
-var DOORS={0:{r:19,c:9},1:{r:2,c:7},2:{r:2,c:11},3:{r:2,c:14},4:{r:19,c:14}};
+var DOORS={0:{r:19,c:10},1:{r:2,c:7},2:{r:2,c:11},3:{r:2,c:14},4:{r:10,c:14}};
 var ROOMS=[
   {r:3, c:3,  w:3, h:6, icon:'🚻', name:'화장실',    color:'#dbeafe', mi:-1},
   {r:3, c:6,  w:3, h:6, icon:'🩸', name:'채혈실',    color:'#fee2e2', mi:1},
   {r:3, c:9,  w:4, h:6, icon:'🩺', name:'진료실1',   color:'#d1fae5', mi:2},
   {r:3, c:13, w:3, h:6, icon:'🫁', name:'방사선과',  color:'#ede9fe', mi:3},
   {r:3, c:16, w:3, h:6, icon:'✚',  name:'내과',      color:'#dbeafe', mi:-1},
-  {r:9, c:16, w:3, h:4, icon:'👁', name:'안과',      color:'#d1fae5', mi:-1},
-  {r:13,c:16, w:3, h:3, icon:'🛗', name:'엘리베이터',color:'#e2e8f0', mi:-1},
+  {r:11,c:16, w:3, h:3, icon:'👁', name:'안과',      color:'#d1fae5', mi:-1},
+  {r:14,c:16, w:3, h:2, icon:'🛗', name:'엘리베이터',color:'#e2e8f0', mi:-1},
   {r:16,c:16, w:3, h:3, icon:'🦴', name:'정형외과',  color:'#dbeafe', mi:-1},
-  {r:9, c:3,  w:4, h:5, icon:'💉', name:'주사실',    color:'#dbeafe', mi:-1},
-  {r:14,c:3,  w:4, h:5, icon:'🤝', name:'상담실',    color:'#dcfce7', mi:-1},
-  {r:14,c:7,  w:5, h:5, icon:'📋', name:'접수·수납', color:'#bbf7d0', mi:0},
-  {r:14,c:12, w:4, h:5, icon:'💊', name:'약국',      color:'#fce7f3', mi:4},
-  {r:9, c:7,  w:5, h:5, icon:'🛋', name:'대기실',    color:'#fdf1e3', mi:-1},
-  {r:9, c:12, w:4, h:5, icon:'🩺', name:'진료실2',   color:'#fde4cf', mi:-1}
+  {r:11,c:3,  w:3, h:4, icon:'💉', name:'주사실',    color:'#dbeafe', mi:-1},
+  {r:15,c:3,  w:3, h:4, icon:'🤝', name:'상담실',    color:'#dcfce7', mi:-1},
+  {r:15,c:8,  w:5, h:4, icon:'📋', name:'접수·수납', color:'#bbf7d0', mi:0},
+  {r:11,c:7,  w:3, h:4, icon:'🛋', name:'대기실',    color:'#fdf1e3', mi:-1},
+  {r:11,c:10, w:3, h:4, icon:'🩺', name:'진료실2',   color:'#fde4cf', mi:-1},
+  {r:11,c:13, w:3, h:4, icon:'💊', name:'약국',      color:'#fce7f3', mi:4}
 ];
 var ENT_R=20, ENT_C=10;
 
@@ -335,6 +337,7 @@ function buildMazeMap(){
   openRect(19,20,1,20); // 아래쪽 복도
   openRect(1,20,1,2);   // 왼쪽 복도
   openRect(1,20,19,20); // 오른쪽 복도
+  openRect(9,10,2,19);  // 가운데를 가로지르는 복도 — 약국은 이 복도를 통해서만 갈 수 있음
   ROOMS.forEach(function(rm){
     for(var rr=rm.r; rr<rm.r+rm.h; rr++) for(var cc=rm.c; cc<rm.c+rm.w; cc++)
       if(rr>=0&&rr<PR&&cc>=0&&cc<PC) mMap[rr][cc]=1;
