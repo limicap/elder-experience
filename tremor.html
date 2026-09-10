@@ -348,6 +348,11 @@ var MISSIONS=[];
 var ENT_R=29, ENT_C=8;
 
 var mCvs,mCtx,mCW,mCH,mMap,mPts,mJitPt,mDraw,mIdx,mHits,mDone,mBombActive,mLevel=0,mMaxLevel=0,mSetIdx=-1;
+// 터치 중(touchmove 콜백) 안에서 DOM을 직접 건드리면 일부 모바일 브라우저가
+// 제스처를 취소해서 화면이 멈춘 것처럼 보이는 문제가 있었다. 그래서 터치
+// 핸들러는 상태값만 갱신하고, 실제 그리기/DOM 갱신은 전부 터치 이벤트와
+// 무관하게 계속 도는 requestAnimationFrame 루프(mLoopTick) 안에서만 한다.
+var mPendingEvent=null, mFailAnim=null, mNeedsDraw=true, mLoopRunning=false;
 var mTremor=makeTremor();
 
 function mBuildMissionSet(){
@@ -393,6 +398,7 @@ function buildMazeMap(){
 
 function initMaze(){
   mIdx=0; mHits=0; mBombActive=false; mDraw=false; mJitPt=null;
+  mPendingEvent=null; mFailAnim=null; mNeedsDraw=true;
   mBuildMissionSet();
   buildMazeMap();
   document.getElementById('mSlider').value=2; onMSlider(2);
@@ -411,6 +417,48 @@ function initMaze(){
     mPts=[{x:ENT_C*mCW+mCW/2, y:ENT_R*mCH+mCH/2, r:ENT_R, c:ENT_C}];
     drawMaze();
   });
+  startMLoop();
+}
+// 화면이 살아있는 동안 계속 도는 렌더 루프. 터치 이벤트 콜백 밖에서 돌기
+// 때문에, 목표 도착/오답 처리로 인한 DOM 갱신이 터치 제스처와 절대
+// 겹치지 않는다. 프레임 중 예외가 나도 다음 프레임에서 계속 복구 시도하며,
+// 오답 애니메이션 중 상태가 멈춰버리는 일이 없도록 매 프레임 스스로 정리한다.
+function mLoopTick(){
+  var scr=document.getElementById('scr-maze');
+  if(!scr || !scr.classList.contains('active')){ mLoopRunning=false; return; }
+  try{
+    if(mPendingEvent && !mFailAnim){
+      var ev=mPendingEvent; mPendingEvent=null;
+      if(ev.type==='success'){
+        mDoArriveSuccess();
+      } else if(ev.type==='fail'){
+        mHits++;
+        var hv=document.getElementById('mvHits'); if(hv) hv.textContent=mHits;
+        mazeToast('❌ 여기는 '+ev.name+'이에요! 처음부터 다시');
+        mBombActive=true;
+        mFailAnim={start:performance.now(), x:ev.x, y:ev.y};
+      }
+      mNeedsDraw=true;
+    }
+    if(mFailAnim){
+      mNeedsDraw=true;
+      if(performance.now()-mFailAnim.start>=400){
+        mFailAnim=null; mBombActive=false;
+        mPts=[{x:ENT_C*mCW+mCW/2,y:ENT_R*mCH+mCH/2,r:ENT_R,c:ENT_C}];
+        mJitPt=null; mNeedsDraw=true;
+      }
+    }
+    if(mNeedsDraw && mCtx){ drawMaze(); mNeedsDraw=false; }
+  }catch(err){
+    // 그리기 중 오류가 나더라도 다음 조작이 영구히 막히지 않도록 강제 복구
+    mBombActive=false; mFailAnim=null; mPendingEvent=null;
+  }
+  requestAnimationFrame(mLoopTick);
+}
+function startMLoop(){
+  if(mLoopRunning) return;
+  mLoopRunning=true;
+  requestAnimationFrame(mLoopTick);
 }
 function restartMaze(){ document.getElementById('mazeVictory').classList.remove('show'); initMaze(); }
 function onMSlider(v){
@@ -443,28 +491,29 @@ function mHandleMove(clientX,clientY){
   mJitPt={x:j.x,y:j.y};
   // 목적지 도착/오답 판정은 흔들림이 섞이지 않은 실제 손끝(raw) 좌표로 한다 —
   // 손떨림 때문에 도착이 씹히거나 도착 직전에 실패 처리되는 문제를 막기 위함.
+  // 여기서는 DOM/캔버스를 절대 건드리지 않고 상태값만 갱신한다 — 실제 반영은
+  // mLoopTick이 다음 애니메이션 프레임에서 처리한다.
   var hitRoom=mRoomAt(raw.r,raw.c);
   if(hitRoom && hitRoom.mi===mIdx){
-    mChkArriveSuccess();
+    if(!mPendingEvent) mPendingEvent={type:'success'};
     var last0=mPts[mPts.length-1];
     if(raw.r!==last0.r||raw.c!==last0.c) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
-    drawMaze();
+    mNeedsDraw=true;
     return;
   }
   // 이미 완료한 방을 다시 지나가는 건 실패가 아니다 — 정답이 아니면서
   // "완료 전" 방(장식용 방 포함, 아직 안 간 다른 미션 방 포함)만 오답 처리.
   if(hitRoom && !(hitRoom.mi>=0 && hitRoom.mi<mIdx)){
-    mDraw=false; mHits++; document.getElementById('mvHits').textContent=mHits;
-    mTriggerFail(j.x,j.y,hitRoom.name,function(){
-      mPts=[{x:ENT_C*mCW+mCW/2,y:ENT_R*mCH+mCH/2,r:ENT_R,c:ENT_C}];
-      mJitPt=null;
-      drawMaze();
-    });
+    if(!mPendingEvent){
+      mDraw=false;
+      mPendingEvent={type:'fail', x:j.x, y:j.y, name:hitRoom.name};
+    }
+    mNeedsDraw=true;
     return;
   }
   var last=mPts[mPts.length-1];
   if(raw.r!==last.r||raw.c!==last.c) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
-  drawMaze();
+  mNeedsDraw=true;
 }
 (function(){
   var cvs;
@@ -489,44 +538,21 @@ function mHandleMove(clientX,clientY){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind();
 })();
-function mTriggerFail(bx,by,roomName,onDone){
-  mBombActive=true; var frame=0,total=20;
-  mazeToast('❌ 여기는 '+roomName+'이에요! 처음부터 다시');
-  function anim(){
-    drawMaze();
-    var prog=frame/total, maxR=Math.max(mCW,mCH)*3;
-    var r=maxR*Math.sin(prog*Math.PI), al=1-prog, ctx=mCtx;
-    ctx.save();
-    var grd=ctx.createRadialGradient(bx,by,0,bx,by,r);
-    grd.addColorStop(0,'rgba(255,90,90,'+(al*0.9)+')'); grd.addColorStop(0.3,'rgba(220,38,38,'+(al*0.8)+')');
-    grd.addColorStop(0.6,'rgba(176,87,74,'+(al*0.5)+')'); grd.addColorStop(1,'rgba(176,87,74,0)');
-    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2); ctx.fill();
-    var sz=Math.max(16,Math.floor(Math.min(mCW,mCH)*3*(1-prog*0.4)));
-    ctx.font=sz+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.globalAlpha=Math.min(1,al*1.5); ctx.fillText('❌',bx,by); ctx.globalAlpha=1;
-    ctx.restore();
-    frame++; if(frame<=total) requestAnimationFrame(anim); else { mBombActive=false; onDone(); }
-  }
-  requestAnimationFrame(anim);
-}
-function mChkArriveSuccess(){
+// 오답 애니메이션(❌ 폭발) 그리기는 drawMaze() 안에서 mFailAnim 상태를 보고
+// 처리한다 — 렌더 루프(mLoopTick)만 rAF를 쓰고, 그 바깥에서 별도의 rAF
+// 체인을 새로 만들지 않기 위함.
+function mDoArriveSuccess(){
   if(mIdx>=MISSIONS.length) return;
   var nm=MISSIONS[mIdx].n; mIdx++;
   var justFinished=mIdx>=MISSIONS.length;
-  // 미션바(#mMbar)를 통째로 다시 그리는 건 화면 레이아웃을 흔드는 작업이라,
-  // 터치 중간(touchmove 콜백) 안에서 그대로 하면 일부 모바일 브라우저가
-  // 터치를 취소해서 화면이 그 자리에서 멈춘 것처럼 보이는 문제가 있었다.
-  // 다음 애니메이션 프레임으로 미뤄서 터치 이벤트 처리와 겹치지 않게 한다.
-  requestAnimationFrame(function(){
-    document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
-    mUpdMLevel();
-    updMazeMbar();
-    if(justFinished){
-      setTimeout(showMazeVictory,300);
-    } else {
-      mazeToast('🎉 LEVEL '+mIdx+' 클리어! ('+nm+' 도착)');
-    }
-  });
+  document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
+  mUpdMLevel();
+  updMazeMbar();
+  if(justFinished){
+    setTimeout(showMazeVictory,300);
+  } else {
+    mazeToast('🎉 LEVEL '+mIdx+' 클리어! ('+nm+' 도착)');
+  }
 }
 function mazeToast(msg){
   var area=document.getElementById('mazeMapArea'); if(!area) return;
@@ -617,6 +643,21 @@ function drawMaze(){
   }
   var last=mPts[mPts.length-1];
   var cur=mJitPt||{x:last.x,y:last.y};
+  // 오답 애니메이션(❌ 폭발) 중에는 손끝 커서 대신 이 표시만 그린다.
+  if(mFailAnim){
+    var prog=Math.min(1,(performance.now()-mFailAnim.start)/400);
+    var maxR=Math.max(mCW,mCH)*3, fr=maxR*Math.sin(prog*Math.PI), al=1-prog;
+    ctx.save();
+    var grd=ctx.createRadialGradient(mFailAnim.x,mFailAnim.y,0,mFailAnim.x,mFailAnim.y,fr);
+    grd.addColorStop(0,'rgba(255,90,90,'+(al*0.9)+')'); grd.addColorStop(0.3,'rgba(220,38,38,'+(al*0.8)+')');
+    grd.addColorStop(0.6,'rgba(176,87,74,'+(al*0.5)+')'); grd.addColorStop(1,'rgba(176,87,74,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(mFailAnim.x,mFailAnim.y,fr,0,Math.PI*2); ctx.fill();
+    var sz=Math.max(16,Math.floor(Math.min(mCW,mCH)*3*(1-prog*0.4)));
+    ctx.font=sz+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.globalAlpha=Math.min(1,al*1.5); ctx.fillText('❌',mFailAnim.x,mFailAnim.y); ctx.globalAlpha=1;
+    ctx.restore();
+    return;
+  }
   // 떨리는 손끝 표시 — 실제 경로선(last)과 흔들린 위치(cur)를 가는 선으로
   // 이어서, 손가락에 가려도 얼마나 떨리는지 눈에 띄게 보여준다.
   if(mLevel>0){
@@ -648,18 +689,32 @@ var WSTEPS=[
   {type:'sentence', text:'식후에 드세요',       hint:'약 봉투 안내문처럼'},
   {type:'sentence', text:'날씨가 좋네요',       hint:'문장을 또박또박 따라 써보세요'}
 ];
-var W={step:0,level:0,drawing:false,drawn:false,strokes:0,devs:[],results:[],lastX:0,lastY:0};
+var W={step:0,level:0,maxLevel:0,drawing:false,drawn:false,strokes:0,devs:[],results:[],lastX:0,lastY:0};
 var wTimerInt=null, wTLeft=15;
 var wCvs,wCtx,W_CVS_H=220;
 var wTremor=makeTremor(W_LV_AMP);
 
 function wStart(){
-  W.step=0; W.level=0; W.results=[];
-  document.getElementById('wSlider').value=0; onWSlider(0);
+  W.step=0; W.results=[];
+  // 미로 체험처럼 단계가 진행될수록(경증→중증) 손떨림이 점점 세지도록,
+  // 슬라이더를 최고 강도로 놓고 시작 — 실제 현재 단계의 강도는
+  // wStageLevel()이 단계 진행률에 맞춰 점진적으로 계산한다.
+  document.getElementById('wSlider').value=2; onWSlider(2);
   wInitCvs(); wBuildDots(); wLoadStep();
 }
 function onWSlider(v){
-  W.level=parseInt(v);
+  W.maxLevel=parseInt(v);
+  wUpdLevel();
+}
+// 단계(idx)가 올라갈수록 손떨림 강도를 슬라이더로 고른 최고 강도까지
+// 점진적으로 올린다 — 미로의 mStageLevel()과 동일한 방식.
+function wStageLevel(idx){
+  if(W.maxLevel<=0) return 0;
+  var i=Math.min(idx,WSTEPS.length-1);
+  return Math.min(W.maxLevel,Math.round(W.maxLevel*i/(WSTEPS.length-1)));
+}
+function wUpdLevel(){
+  W.level=wStageLevel(W.step);
   var b=document.getElementById('wBadge');
   b.textContent=LV_LABEL[W.level]; b.className='lvbadge '+LV_CLASS[W.level];
 }
@@ -691,6 +746,7 @@ function wBuildDots(){
 }
 function wLoadStep(){
   var s=WSTEPS[W.step];
+  wUpdLevel();
   for(var i=0;i<WSTEPS.length;i++){ var d=document.getElementById('wdot'+i); if(d) d.className='wsdot'+(i<W.step?' done':i===W.step?' cur':''); }
   document.getElementById('wsinfo').innerHTML=(s.type==='word'?'📝 <b>단어 따라쓰기</b>':'✍️ <b>문장 따라쓰기</b>')+' &nbsp;&middot;&nbsp; '+(W.step+1)+' / '+WSTEPS.length+'단계';
   document.getElementById('wstep-label').textContent=(s.type==='word'?'📝 단어 따라쓰기 — ':'✍️ 문장 따라쓰기 — ')+s.hint;
