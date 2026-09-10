@@ -294,11 +294,16 @@ function goWrite(){ showScr('scr-write'); wStart(); }
 var LV_LABEL=['정상','경증','중증'];
 var LV_CLASS=['lv0','lv1','lv2'];
 var LV_AMP=[0,10,26];
-function makeTremor(){
+// 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
+// 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
+// 값을 따로 쓴다.
+var W_LV_AMP=[0,2.5,7];
+function makeTremor(ampArr){
+  var amps=ampArr||LV_AMP;
   var noiseT=0;
   return function(x,y,level){
     if(level===0) return {x:x,y:y};
-    var amp=LV_AMP[level];
+    var amp=amps[level];
     noiseT+=0.20+level*0.05;
     var t=noiseT;
     var nx=Math.sin(t*2.3)*amp*0.55+Math.sin(t*5.7)*amp*0.30+Math.sin(t*12.1)*amp*0.15;
@@ -466,13 +471,14 @@ function mHandleMove(clientX,clientY){
   function bind(){
     cvs=document.getElementById('mazeCvs');
     cvs.addEventListener('touchstart',function(e){
-      if(mBombActive) return;
+      if(mBombActive||!e.touches[0]) return;
       var t=e.touches[0], raw=mPtc(t.clientX,t.clientY), last=mPts[mPts.length-1];
       if(Math.abs(raw.r-last.r)<=3 && Math.abs(raw.c-last.c)<=3) mDraw=true;
       e.preventDefault();
     },{passive:false});
-    cvs.addEventListener('touchmove',function(e){ mHandleMove(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault(); },{passive:false});
+    cvs.addEventListener('touchmove',function(e){ if(e.touches[0]) mHandleMove(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault(); },{passive:false});
     cvs.addEventListener('touchend',function(e){ mDraw=false; e.preventDefault(); },{passive:false});
+    cvs.addEventListener('touchcancel',function(e){ mDraw=false; },{passive:true});
     cvs.addEventListener('mousedown',function(e){
       if(mBombActive) return;
       var raw=mPtc(e.clientX,e.clientY), last=mPts[mPts.length-1];
@@ -506,14 +512,21 @@ function mTriggerFail(bx,by,roomName,onDone){
 function mChkArriveSuccess(){
   if(mIdx>=MISSIONS.length) return;
   var nm=MISSIONS[mIdx].n; mIdx++;
-  document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
-  mUpdMLevel();
-  updMazeMbar();
-  if(mIdx>=MISSIONS.length){
-    setTimeout(showMazeVictory,300);
-  } else {
-    mazeToast('🎉 LEVEL '+mIdx+' 클리어! ('+nm+' 도착)');
-  }
+  var justFinished=mIdx>=MISSIONS.length;
+  // 미션바(#mMbar)를 통째로 다시 그리는 건 화면 레이아웃을 흔드는 작업이라,
+  // 터치 중간(touchmove 콜백) 안에서 그대로 하면 일부 모바일 브라우저가
+  // 터치를 취소해서 화면이 그 자리에서 멈춘 것처럼 보이는 문제가 있었다.
+  // 다음 애니메이션 프레임으로 미뤄서 터치 이벤트 처리와 겹치지 않게 한다.
+  requestAnimationFrame(function(){
+    document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
+    mUpdMLevel();
+    updMazeMbar();
+    if(justFinished){
+      setTimeout(showMazeVictory,300);
+    } else {
+      mazeToast('🎉 LEVEL '+mIdx+' 클리어! ('+nm+' 도착)');
+    }
+  });
 }
 function mazeToast(msg){
   var area=document.getElementById('mazeMapArea'); if(!area) return;
@@ -631,14 +644,14 @@ var WSTEPS=[
   {type:'word',     text:'김철수',                    hint:'이름을 또박또박 따라 써보세요'},
   {type:'word',     text:'노인복지관',                 hint:'기관 이름을 따라 써보세요'},
   {type:'word',     text:'010-1234-5678',            hint:'전화번호를 따라 써보세요'},
-  {type:'sentence', text:'오늘 약을 먹었습니다.',       hint:'처방전에 서명하듯이'},
-  {type:'sentence', text:'식사 전에 복용하세요.',       hint:'약 봉투 안내문처럼'},
-  {type:'sentence', text:'오늘은 날씨가 무척 좋습니다.', hint:'문장을 또박또박 따라 써보세요'}
+  {type:'sentence', text:'약을 먹었어요',       hint:'처방전에 서명하듯이'},
+  {type:'sentence', text:'식후에 드세요',       hint:'약 봉투 안내문처럼'},
+  {type:'sentence', text:'날씨가 좋네요',       hint:'문장을 또박또박 따라 써보세요'}
 ];
 var W={step:0,level:0,drawing:false,drawn:false,strokes:0,devs:[],results:[],lastX:0,lastY:0};
 var wTimerInt=null, wTLeft=15;
 var wCvs,wCtx,W_CVS_H=220;
-var wTremor=makeTremor();
+var wTremor=makeTremor(W_LV_AMP);
 
 function wStart(){
   W.step=0; W.level=0; W.results=[];
@@ -683,8 +696,27 @@ function wLoadStep(){
   document.getElementById('wstep-label').textContent=(s.type==='word'?'📝 단어 따라쓰기 — ':'✍️ 문장 따라쓰기 — ')+s.hint;
   var gt=document.getElementById('wguide-text');
   gt.textContent=s.text; gt.className='wcvs-guide-text'+(s.type==='sentence'?' sentence':'');
+  wFitGuideFont();
   document.getElementById('wbtn-nxt').textContent=W.step<WSTEPS.length-1?'다음 →':'결과 보기 →';
   wClearCvs(); wStartTimer(s.type==='sentence'?25:15);
+}
+// 전화번호처럼 글자 수가 많은 줄은 기본 크기로 3줄까지 줄바꿈되던 문제가
+// 있어서, 캔버스 폭에 맞을 때까지 글자 크기를 줄여 항상 한 줄에 들어가게 한다.
+function wFitGuideFont(){
+  var gt=document.getElementById('wguide-text'); if(!gt) return;
+  var s=WSTEPS[W.step];
+  var isSentence=s.type==='sentence';
+  var base=isSentence?30:58, minSize=isSentence?16:22;
+  var outer=document.getElementById('wcvs-outer');
+  var maxW=(outer&&outer.clientWidth?outer.clientWidth:340)-32;
+  // 오프스크린 캔버스로 너비를 추정하면 실제 폰트(Noto Sans KR)와 달라서
+  // 어긋날 수 있어서, 실제 엘리먼트의 scrollWidth를 직접 재서 줄인다.
+  var size=base;
+  gt.style.fontSize=size+'px';
+  while(size>minSize && gt.scrollWidth>maxW){
+    size-=2;
+    gt.style.fontSize=size+'px';
+  }
 }
 function wNextStep(){ wSaveResult(); wStopTimer(); if(W.step<WSTEPS.length-1){ W.step++; wLoadStep(); } else { wShowResult(); } }
 function wSaveResult(){
@@ -698,6 +730,7 @@ function wInitCvs(){
   wCvs.width=outer.clientWidth||340; wCvs.height=W_CVS_H;
   wCvs.style.height=W_CVS_H+'px'; outer.style.height=W_CVS_H+'px';
   wCtx=wCvs.getContext('2d'); wDrawBg();
+  wFitGuideFont();
   wCvs.addEventListener('touchstart',function(e){ e.preventDefault(); var p=wGetTP(e.touches[0]); wStartDraw(p.x,p.y); },{passive:false});
   wCvs.addEventListener('touchmove',function(e){ e.preventDefault(); if(!W.drawing) return; var p=wGetTP(e.touches[0]); wMoveDraw(p.x,p.y); },{passive:false});
   wCvs.addEventListener('touchend',function(e){ e.preventDefault(); wEndDraw(); },{passive:false});
@@ -730,7 +763,7 @@ function wMoveDraw(x,y){
   var p=wTremor(x,y,W.level);
   if(p.dev!==undefined) W.devs.push(p.dev);
   wCtx.lineTo(p.x,p.y);
-  wCtx.strokeStyle='#EEEAE2'; wCtx.lineWidth=2.4+W.level*0.15; wCtx.lineCap='round'; wCtx.lineJoin='round'; wCtx.stroke();
+  wCtx.strokeStyle='#1a1a1a'; wCtx.lineWidth=2.6+W.level*0.15; wCtx.lineCap='round'; wCtx.lineJoin='round'; wCtx.stroke();
   wCtx.beginPath(); wCtx.moveTo(p.x,p.y); W.lastX=p.x; W.lastY=p.y; wUpdateStats();
 }
 function wEndDraw(){ W.drawing=false; }
