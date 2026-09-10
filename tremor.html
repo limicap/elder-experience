@@ -298,7 +298,10 @@ function goWrite(){ showScr('scr-write'); wStart(); }
    ════════════════════════════════════════════ */
 var LV_LABEL=['정상','경증','중증'];
 var LV_CLASS=['lv0','lv1','lv2'];
-var LV_AMP=[0,10,26];
+// 이제 떨림이 실제 도착/오답 판정에 쓰이므로, 복도 폭(칸당 약 11px, 복도는
+// 1칸)보다 지나치게 커지면 거의 항상 실패해버린다 — 중증에서도 조심해서
+// 움직이면 통과할 수 있는 수준으로 맞춘다.
+var LV_AMP=[0,4,9];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
@@ -503,11 +506,14 @@ function mHandleMove(clientX,clientY){
   if(raw.r<0||raw.r>=PR||raw.c<0||raw.c>=PC) return;
   var j=mTremor(raw.x,raw.y,mLevel);
   mJitPt={x:j.x,y:j.y};
-  // 목적지 도착/오답 판정은 흔들림이 섞이지 않은 실제 손끝(raw) 좌표로 한다 —
-  // 손떨림 때문에 도착이 씹히거나 도착 직전에 실패 처리되는 문제를 막기 위함.
+  // 도착/오답 판정은 흔들린(떨리는) 손끝 위치로 한다 — 손이 떨려서 옆방에
+  // 닿으면 그게 실제로 실패로 이어져야 체험 의미가 있다. (raw 좌표로
+  // 판정하면 화면에 흔들리는 게 보이든 말든 실제로는 아무 영향이 없어서
+  // 손떨림 강도가 난이도와 무관해지는 문제가 있었다.)
   // 여기서는 DOM/캔버스를 절대 건드리지 않고 상태값만 갱신한다 — 실제 반영은
   // mLoopTick이 다음 애니메이션 프레임에서 처리한다.
-  var hitRoom=mRoomAt(raw.r,raw.c);
+  var jr=Math.floor(j.y/mCH), jc=Math.floor(j.x/mCW);
+  var hitRoom=mRoomAt(jr,jc);
   if(hitRoom && hitRoom.mi===mIdx){
     if(!mPendingEvent) mPendingEvent={type:'success'};
     var last0=mPts[mPts.length-1];

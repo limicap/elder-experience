@@ -29,7 +29,12 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 .game-card .name{font-size:15px;font-weight:800;margin-bottom:4px;}
 .game-card .desc{font-size:12px;opacity:.82;line-height:1.4;}
 .cam-badge{display:inline-block;background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;margin-bottom:6px;letter-spacing:.5px;}
-#game-screen{background:#0f172a;flex-direction:column;overflow:hidden;position:relative;touch-action:none;overscroll-behavior:none;height:100vh;}
+/* 100vh/100dvh, JS로 window.innerHeight를 재서 고정하는 방식 모두 모바일
+   주소창이 나타났다 사라졌다 하는 시점에 따라 실제 보이는 화면보다 크게
+   잡히거나 갱신이 안 되는 경우가 있어("물건 찾기" 화면 아래쪽이 흰 여백으로
+   가려짐) — position:fixed + inset:0은 브라우저가 매 순간 실제 보이는
+   뷰포트에 맞춰 계속 다시 맞춰주므로 별도 JS 없이도 항상 정확하다. */
+#game-screen{background:#0f172a;flex-direction:column;overflow:hidden;position:fixed;inset:0;min-height:0;touch-action:none;overscroll-behavior:none;}
 #red-flash{position:absolute;inset:0;pointer-events:none;z-index:50;}
 @keyframes redpulse{0%,100%{background:rgba(220,38,38,0)}50%{background:rgba(220,38,38,.42)}}
 #red-flash.flashing{animation:redpulse .65s infinite;}
@@ -657,24 +662,13 @@ function drawCanvasGhost(ctx,canvas){
 
 function timeForGame(s){ if(G.game==='items') return 30; if(G.game==='kiosk') return 40; if(G.game==='subway') return 35; return [20,18,15][s-1]; }
 function showScr(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById(id).classList.add('active');}
-// 모바일에서 CSS 100vh는 주소창이 보이는 상태의 실제 화면보다 더 크게 잡혀서,
-// 화면 아래쪽(예: 물건 찾기의 "지금 찾을 것" 표시줄)이 스크롤도 안 되는
-// 채로 화면 밖에 가려지는 문제가 있다. 100dvh는 이를 지원하는 최신 브라우저
-// 에서만 동작하므로, 모든 브라우저에서 동일하게 실제 보이는 높이를 맞추기
-// 위해 window.innerHeight를 직접 읽어 픽셀 값으로 고정한다.
-function fitGameScreenHeight(){
-  var gs=document.getElementById('game-screen'); if(!gs) return;
-  gs.style.height=window.innerHeight+'px';
-}
-window.addEventListener('resize',fitGameScreenHeight);
-window.addEventListener('orientationchange',function(){ setTimeout(fitGameScreenHeight,50); });
 function startGame(game){
   G.game=game;G.d='normal';G.s=1;curGroup='aging';
   document.querySelectorAll('#gtabs .gtab').forEach(function(t){t.classList.toggle('on',t.dataset.g==='aging');});
   renderChips();
   [1,2,3].forEach(function(i){document.getElementById('sb'+i).classList.toggle('on',i===1);});
   document.getElementById('gtitle').textContent={path:'병원 길찾기',items:'물건 찾기',write:'안내문 따라쓰기',kiosk:'키오스크 주문',subway:'지하철 노선도 찾기'}[game];
-  tLeft=timeForGame(1);updTimer();stopFlash();showScr('game-screen');fitGameScreenHeight();buildGame();startTimer();
+  tLeft=timeForGame(1);updTimer();stopFlash();showScr('game-screen');buildGame();startTimer();
 }
 function exitGame(){stopTimer();stopFlash();stopFocusLagCycle();showScr('home');}
 function setD(d){
