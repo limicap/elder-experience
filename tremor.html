@@ -302,7 +302,7 @@ var LV_AMP=[0,10,26];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
-var W_LV_AMP=[0,4,9];
+var W_LV_AMP=[0,6.5,13];
 function makeTremor(ampArr){
   var amps=ampArr||LV_AMP;
   return function(x,y,level){
@@ -331,21 +331,24 @@ function makeTremor(ampArr){
    접수·수납→채혈실→진료실1→방사선과→약국
    ════════════════════════════════════════════ */
 var PR=30, PC=30;
+// 방을 키우고(4x4→5x5) 그 사이 복도는 1칸으로 좁혀서 — 목표까지 가는 길에
+// 옆방을 스치기만 해도 실패 처리되니, 방이 붙어있을수록 살짝만 삐끗해도
+// 옆방에 걸려 더 정밀하게 움직여야 한다.
 var ROOMS=[
-  {r:1, c:1,  w:4, h:4, icon:'🚻', name:'화장실',    color:'#dbeafe'},
-  {r:1, c:7,  w:4, h:4, icon:'🩸', name:'채혈실',    color:'#fee2e2'},
-  {r:1, c:13, w:4, h:4, icon:'🩺', name:'진료실1',   color:'#d1fae5'},
-  {r:1, c:19, w:4, h:4, icon:'🫁', name:'방사선과',  color:'#ede9fe'},
-  {r:1, c:25, w:4, h:4, icon:'✚',  name:'내과',      color:'#dbeafe'},
-  {r:7, c:1,  w:4, h:4, icon:'💉', name:'주사실',    color:'#dbeafe'},
-  {r:7, c:13, w:4, h:4, icon:'🛋', name:'대기실',    color:'#fdf1e3'},
-  {r:7, c:17, w:4, h:4, icon:'🩺', name:'진료실2',   color:'#fde4cf'},
-  {r:7, c:25, w:4, h:4, icon:'👁', name:'안과',      color:'#d1fae5'},
-  {r:13,c:1,  w:4, h:4, icon:'🤝', name:'상담실',    color:'#dcfce7'},
-  {r:13,c:13, w:4, h:4, icon:'💊', name:'약국',      color:'#fce7f3'},
-  {r:13,c:25, w:4, h:4, icon:'🛗', name:'엘리베이터',color:'#e2e8f0'},
-  {r:19,c:7,  w:4, h:4, icon:'📋', name:'접수·수납', color:'#bbf7d0'},
-  {r:19,c:19, w:4, h:4, icon:'🦴', name:'정형외과',  color:'#dbeafe'}
+  {r:1, c:1,  w:5, h:5, icon:'🚻', name:'화장실',    color:'#dbeafe'},
+  {r:1, c:7,  w:5, h:5, icon:'🩸', name:'채혈실',    color:'#fee2e2'},
+  {r:1, c:13, w:5, h:5, icon:'🩺', name:'진료실1',   color:'#d1fae5'},
+  {r:1, c:19, w:5, h:5, icon:'🫁', name:'방사선과',  color:'#ede9fe'},
+  {r:1, c:25, w:5, h:5, icon:'✚',  name:'내과',      color:'#dbeafe'},
+  {r:7, c:1,  w:5, h:5, icon:'💉', name:'주사실',    color:'#dbeafe'},
+  {r:7, c:13, w:5, h:5, icon:'🛋', name:'대기실',    color:'#fdf1e3'},
+  {r:7, c:18, w:5, h:5, icon:'🩺', name:'진료실2',   color:'#fde4cf'},
+  {r:7, c:25, w:5, h:5, icon:'👁', name:'안과',      color:'#d1fae5'},
+  {r:13,c:1,  w:5, h:5, icon:'🤝', name:'상담실',    color:'#dcfce7'},
+  {r:13,c:13, w:5, h:5, icon:'💊', name:'약국',      color:'#fce7f3'},
+  {r:13,c:25, w:5, h:5, icon:'🛗', name:'엘리베이터',color:'#e2e8f0'},
+  {r:19,c:7,  w:5, h:5, icon:'📋', name:'접수·수납', color:'#bbf7d0'},
+  {r:19,c:19, w:5, h:5, icon:'🦴', name:'정형외과',  color:'#dbeafe'}
 ];
 // 목표 세트 3개 — 다시 도전할 때마다 다른 목표로 바뀜. 손떨림 강도는
 // 세트 안에서 뒤로 갈수록(=마지막 레벨일수록) 슬라이더로 고른 값까지 점점 세짐.
@@ -391,15 +394,16 @@ function buildMazeMap(){
   }
   // 방이 놓이는 4개의 가로 띠와, 그 사이사이 복도 4줄을 전부 열어둔 뒤
   // 방 자리만 다시 벽으로 덮는다 — 방이 없는 칸은 자동으로 복도(광장)가 된다.
-  openRect(1,4,   1,28); // 1행 방 띠
-  openRect(5,6,   1,28); // 복도
-  openRect(7,10,  1,28); // 2행 방 띠
-  openRect(11,12, 1,28); // 복도
-  openRect(13,16, 1,28); // 3행 방 띠
-  openRect(17,18, 1,28); // 복도
-  openRect(19,22, 1,28); // 4행 방 띠
-  openRect(23,24, 1,28); // 복도
-  openRect(25,29, 7,10); // 입구로 이어지는 복도
+  // 방이 5x5로 커진 만큼 띠도 넓어지고, 그 사이 복도는 1칸으로 좁아진다.
+  openRect(1,5,   1,29); // 1행 방 띠
+  openRect(6,6,   1,29); // 복도
+  openRect(7,11,  1,29); // 2행 방 띠
+  openRect(12,12, 1,29); // 복도
+  openRect(13,17, 1,29); // 3행 방 띠
+  openRect(18,18, 1,29); // 복도
+  openRect(19,23, 1,29); // 4행 방 띠
+  openRect(24,24, 1,29); // 복도
+  openRect(25,29, 7,11); // 입구로 이어지는 복도
   ROOMS.forEach(function(rm){
     for(var rr=rm.r; rr<rm.r+rm.h; rr++) for(var cc=rm.c; cc<rm.c+rm.w; cc++)
       if(rr>=0&&rr<PR&&cc>=0&&cc<PC) mMap[rr][cc]=1;
@@ -537,9 +541,12 @@ function mHandleMove(clientX,clientY){
       // 누르면 이후 모든 터치가 조용히 무시되어 화면이 멈춘 것처럼 보였다.
       // 이게 여러 번의 "멈춤" 수정에도 계속 남아있던 진짜 원인이었다.
       // 이제 어디를 다시 눌러도 바로 그리기가 재개되게 한다.
+      // 새로 누른 자리를 이전 선의 연속이 아니라 새 선의 시작점으로 삼는다
+      // — 안 그러면 예전 마지막 점과 지금 누른 자리를 잇는 엉뚱한 직선이
+      // 그어져 보인다.
       var t=e.touches[0], raw=mPtc(t.clientX,t.clientY);
       mDraw=true;
-      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
+      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC) mPts=[{x:raw.x,y:raw.y,r:raw.r,c:raw.c}];
       mNeedsDraw=true;
       e.preventDefault();
     },{passive:false});
@@ -550,7 +557,7 @@ function mHandleMove(clientX,clientY){
       if(mBombActive) return;
       var raw=mPtc(e.clientX,e.clientY);
       mDraw=true;
-      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
+      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC) mPts=[{x:raw.x,y:raw.y,r:raw.r,c:raw.c}];
       mNeedsDraw=true;
     });
     cvs.addEventListener('mousemove',function(e){ mHandleMove(e.clientX,e.clientY); });
@@ -565,6 +572,10 @@ function mDoArriveSuccess(){
   if(mIdx>=MISSIONS.length) return;
   var nm=MISSIONS[mIdx].n; mIdx++;
   var justFinished=mIdx>=MISSIONS.length;
+  // 단계를 깰 때마다 지금까지 그어온 선을 지우고, 방금 도착한 자리에서부터
+  // 새로 시작한다 — 이전 단계 선이 계속 화면에 남아 지도가 지저분해지는
+  // 것도 막고, 다음 단계 선이 이전 단계 끝점과 이어져 보이는 것도 막는다.
+  mPts=[mPts[mPts.length-1]];
   document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
   mUpdMLevel();
   mRefreshMbar();
@@ -715,10 +726,12 @@ function drawMaze(){
 /* ════════════════════════════════════════════
    글쓰기 · 수전증 따라쓰기
    ════════════════════════════════════════════ */
+// 전화번호(숫자)는 획이 단순해서 손떨림이 잘 안 느껴진다는 피드백으로,
+// 서명처럼 글자 획이 많은 단어로 바꿨다 — 동의서에 서명하는 상황과도 맞음.
 var WSTEPS=[
   {type:'word',     text:'김철수',                    hint:'이름을 또박또박 따라 써보세요'},
   {type:'word',     text:'노인복지관',                 hint:'기관 이름을 따라 써보세요'},
-  {type:'word',     text:'010-1234-5678',            hint:'전화번호를 따라 써보세요'},
+  {type:'word',     text:'동의합니다',                 hint:'동의서에 서명하듯이'},
   {type:'sentence', text:'약을 먹었어요',       hint:'처방전에 서명하듯이'},
   {type:'sentence', text:'식후에 드세요',       hint:'약 봉투 안내문처럼'},
   {type:'sentence', text:'날씨가 좋네요',       hint:'문장을 또박또박 따라 써보세요'}
