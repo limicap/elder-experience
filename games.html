@@ -29,7 +29,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 .game-card .name{font-size:15px;font-weight:800;margin-bottom:4px;}
 .game-card .desc{font-size:12px;opacity:.82;line-height:1.4;}
 .cam-badge{display:inline-block;background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;margin-bottom:6px;letter-spacing:.5px;}
-#game-screen{background:#0f172a;flex-direction:column;overflow:hidden;position:relative;touch-action:none;overscroll-behavior:none;}
+#game-screen{background:#0f172a;flex-direction:column;overflow:hidden;position:relative;touch-action:none;overscroll-behavior:none;height:100vh;height:100dvh;}
 #red-flash{position:absolute;inset:0;pointer-events:none;z-index:50;}
 @keyframes redpulse{0%,100%{background:rgba(220,38,38,0)}50%{background:rgba(220,38,38,.42)}}
 #red-flash.flashing{animation:redpulse .65s infinite;}
@@ -149,7 +149,7 @@ html,body{height:100%;font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-seri
 .kiosk-wrap{position:relative;width:100%;flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;background:#f5ead9;}
 .kiosk-content{flex:1;overflow-y:auto;padding:20px 16px 28px;display:flex;flex-direction:column;gap:16px;}
 .kiosk-title{font-size:22px;font-weight:900;color:#7c2d12;text-align:center;text-shadow:1px 1px 0 #fde68a;margin-bottom:4px;}
-.kiosk-mission-bar{background:#1e293b;color:#fbbf24;font-size:14px;font-weight:800;text-align:center;padding:10px 12px;flex-shrink:0;line-height:1.5;}
+.kiosk-mission-bar{background:#1e293b;color:#fbbf24;font-size:14px;font-weight:800;text-align:center;padding:10px 12px;flex-shrink:0;line-height:1.5;position:sticky;top:0;z-index:5;}
 .kiosk-drink-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .kiosk-drink-btn{background:#fff;border:3px solid #d6c3a1;border-radius:18px;padding:18px 10px;text-align:center;cursor:pointer;transition:transform .12s;}
 .kiosk-drink-btn:active{transform:scale(.95);}
@@ -281,7 +281,10 @@ var DRAGGABLE_FOCUS=['amd','glaucoma','vf','glare'];
 /* ── VISION CONDITIONS (vision.html에서 이식, 게임용으로 일부 종류/강도 조정) ── */
 var VISION_AGING=[
   {id:'cataract',name:'백내장',group:'aging',
-    apply:function(t){var e=Math.pow(t,1.7);return{filter:'blur('+(0.3+7*e)+'px) contrast('+(100-55*e)+'%) saturate('+(100-40*e)+'%) sepia('+(4+34*e)+'%) brightness('+(100+3*t)+'%)',haze:e};}},
+    // 중기·말기가 화면을 거의 완전히 안 보이게 만들어서(블러+뿌연 막 이중 적용)
+    // 게임 진행 자체가 불가능하다는 피드백으로 곡선을 완만하게 낮춤 — 말기에도
+    // 형태·색은 어느 정도 분간되도록 함. haze는 필터와 별개로 더 낮게 눌러줌.
+    apply:function(t){var e=Math.pow(t,1.4);return{filter:'blur('+(0.3+4*e)+'px) contrast('+(100-35*e)+'%) saturate('+(100-28*e)+'%) sepia('+(4+22*e)+'%) brightness('+(100+3*t)+'%)',haze:e*0.55};}},
   {id:'glaucoma',name:'녹내장',group:'aging',
     apply:function(t){return{filter:'contrast('+(100+4*t)+'%)',glaucomaLoss:t};}},
   {id:'amd',name:'황반변성',group:'aging',
