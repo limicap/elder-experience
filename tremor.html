@@ -12,6 +12,11 @@
 <style>
 html,body{ overflow-y:auto; overscroll-behavior:none; }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+/* 캔버스에서 손가락을 잠깐 멈춘 채로 있으면(도착 확인하려고 누르고 있는 것처럼)
+   iOS 등에서 길게 누르기로 인식해 선택/확대 콜아웃이 뜨면서 진행 중이던
+   터치 제스처가 끊겨 화면이 멈춘 것처럼 보일 수 있다 — 그리기용 캔버스에서는
+   이런 콜아웃/선택 동작을 아예 막는다. */
+#mazeCvs,#wCvs{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; -webkit-user-drag:none; }
 .screen{display:none;}
 .screen.active{display:flex;flex-direction:column;min-height:100vh;}
 
@@ -297,17 +302,22 @@ var LV_AMP=[0,10,26];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
-var W_LV_AMP=[0,2.5,7];
+var W_LV_AMP=[0,1.4,3.2];
 function makeTremor(ampArr){
   var amps=ampArr||LV_AMP;
-  var noiseT=0;
   return function(x,y,level){
     if(level===0) return {x:x,y:y};
     var amp=amps[level];
-    noiseT+=0.20+level*0.05;
-    var t=noiseT;
-    var nx=Math.sin(t*2.3)*amp*0.55+Math.sin(t*5.7)*amp*0.30+Math.sin(t*12.1)*amp*0.15;
-    var ny=Math.sin(t*3.1+1.2)*amp*0.55+Math.sin(t*7.3+0.8)*amp*0.30+Math.sin(t*14.5+2.1)*amp*0.15;
+    // 실제 경과 시간(performance.now) 기준으로 위상을 진행시켜, 손을
+    // 천천히 움직여도(=글씨를 쓸 때) 비현실적으로 촘촘해지지 않게 한다.
+    // x/y를 서로 다른 주파수로 따로따로 흔들면 리사주 도형처럼 동그랗게
+    // 말려서 "꼬불꼬불"해 보이므로, 두 축을 거의 같은 위상(w)으로 묶어서
+    // 한쪽으로 왔다갔다 떠는 느낌만 나게 하고 아주 약한 보조 성분만 더한다.
+    var t=performance.now()/1000;
+    var f=3.0+level*0.4;
+    var w=Math.sin(t*2*Math.PI*f);
+    var nx=w*amp*0.4;
+    var ny=w*amp*0.85+Math.sin(t*2*Math.PI*f*2.3+0.8)*amp*0.1;
     return {x:x+nx,y:y+ny,dev:Math.hypot(nx,ny)};
   };
 }
@@ -405,7 +415,7 @@ function initMaze(){
   document.getElementById('mvHits').textContent='0';
   document.getElementById('mvDone').textContent='0/'+MISSIONS.length;
   document.getElementById('mazeVictory').classList.remove('show');
-  updMazeMbar();
+  mBuildMbarDom();
   var area=document.getElementById('mazeMapArea');
   requestAnimationFrame(function(){
     var aW=area.clientWidth||340, aH=area.clientHeight||340;
@@ -547,7 +557,7 @@ function mDoArriveSuccess(){
   var justFinished=mIdx>=MISSIONS.length;
   document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
   mUpdMLevel();
-  updMazeMbar();
+  mRefreshMbar();
   if(justFinished){
     setTimeout(showMazeVictory,300);
   } else {
@@ -565,15 +575,29 @@ function showMazeVictory(){
   document.getElementById('mazeVictoryMsg').innerHTML='흔들리는 손으로 목적지를 모두 찾아가셨습니다!<br><br>다른 방으로 <b>'+mHits+'번</b> 잘못 들어가셨어요.';
   document.getElementById('mazeVictory').classList.add('show');
 }
-function updMazeMbar(){
-  var bar=document.getElementById('mMbar'); if(!bar) return; bar.innerHTML='';
+// 미션바는 목표를 깰 때마다 innerHTML을 통째로 비우고 다시 만들면 그때마다
+// 레이아웃을 흔드는 큰 리플로우가 발생한다 — 손가락이 아직 화면에 닿아있는
+// 상태(터치 제스처 도중)에 이런 리플로우가 일어나면 일부 모바일 브라우저가
+// 제스처 자체를 취소해서 화면이 멈춘 것처럼 보일 수 있다. 그래서 DOM 노드는
+// 미로를 시작할 때 딱 한 번만 만들고, 이후에는 클래스/텍스트만 바꾼다.
+var mMbarEls=[];
+function mBuildMbarDom(){
+  var bar=document.getElementById('mMbar'); if(!bar) return; bar.innerHTML=''; mMbarEls=[];
   MISSIONS.forEach(function(m,i){
     if(i>0){ var arr=document.createElement('div'); arr.className='marrow'; arr.textContent='›'; bar.appendChild(arr); }
     var step=document.createElement('div'); step.className='mstep';
-    var dot=document.createElement('div'); dot.className='mdot '+(i<mIdx?'done':i===mIdx?'active':'');
-    dot.textContent=i<mIdx?'✓':m.ic;
-    var name=document.createElement('div'); name.className='mname'+(i===mIdx?' active-name':''); name.textContent=m.n;
+    var dot=document.createElement('div'); dot.className='mdot';
+    var name=document.createElement('div'); name.className='mname'; name.textContent=m.n;
     step.appendChild(dot); step.appendChild(name); bar.appendChild(step);
+    mMbarEls.push({dot:dot, name:name, icon:m.ic});
+  });
+  mRefreshMbar();
+}
+function mRefreshMbar(){
+  mMbarEls.forEach(function(el,i){
+    el.dot.className='mdot '+(i<mIdx?'done':i===mIdx?'active':'');
+    el.dot.textContent=i<mIdx?'✓':el.icon;
+    el.name.className='mname'+(i===mIdx?' active-name':'');
   });
   updMazeGoal();
 }
