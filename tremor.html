@@ -298,10 +298,10 @@ function goWrite(){ showScr('scr-write'); wStart(); }
    ════════════════════════════════════════════ */
 var LV_LABEL=['정상','경증','중증'];
 var LV_CLASS=['lv0','lv1','lv2'];
-// 이제 떨림이 실제 도착/오답 판정에 쓰이므로, 복도 폭(칸당 약 11px, 복도는
-// 1칸)보다 지나치게 커지면 거의 항상 실패해버린다 — 중증에서도 조심해서
-// 움직이면 통과할 수 있는 수준으로 맞춘다.
-var LV_AMP=[0,4,9];
+// 떨림이 실제 도착/오답 판정에 쓰이므로, 복도 폭(2칸, 칸당 약 10px)보다
+// 지나치게 커지면 거의 항상 실패해버린다 — 눈에 띄게 흔들리면서도 중증에서
+// 조심해서 움직이면 통과할 수 있는 수준으로 맞춘다.
+var LV_AMP=[0,7,15];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
@@ -333,25 +333,25 @@ function makeTremor(ampArr){
    전부 사이를 띄워 복도를 두었음.
    접수·수납→채혈실→진료실1→방사선과→약국
    ════════════════════════════════════════════ */
-var PR=30, PC=30;
-// 방을 키우고(4x4→5x5) 그 사이 복도는 1칸으로 좁혀서 — 목표까지 가는 길에
-// 옆방을 스치기만 해도 실패 처리되니, 방이 붙어있을수록 살짝만 삐끗해도
-// 옆방에 걸려 더 정밀하게 움직여야 한다.
+// 방은 5x5로 크게, 그 사이 복도는 2칸으로 — 너무 좁으면(1칸) 접수·수납처럼
+// 방을 갓 나설 때부터 옆방에 닿기 딱 좋아서 "조심하면 지나갈 수 있는" 정도가
+// 아니라 거의 항상 실패하게 된다. 2칸 폭을 확보하려고 격자도 30→34로 키웠다.
+var PR=34, PC=34;
 var ROOMS=[
   {r:1, c:1,  w:5, h:5, icon:'🚻', name:'화장실',    color:'#dbeafe'},
-  {r:1, c:7,  w:5, h:5, icon:'🩸', name:'채혈실',    color:'#fee2e2'},
-  {r:1, c:13, w:5, h:5, icon:'🩺', name:'진료실1',   color:'#d1fae5'},
-  {r:1, c:19, w:5, h:5, icon:'🫁', name:'방사선과',  color:'#ede9fe'},
-  {r:1, c:25, w:5, h:5, icon:'✚',  name:'내과',      color:'#dbeafe'},
-  {r:7, c:1,  w:5, h:5, icon:'💉', name:'주사실',    color:'#dbeafe'},
-  {r:7, c:13, w:5, h:5, icon:'🛋', name:'대기실',    color:'#fdf1e3'},
-  {r:7, c:18, w:5, h:5, icon:'🩺', name:'진료실2',   color:'#fde4cf'},
-  {r:7, c:25, w:5, h:5, icon:'👁', name:'안과',      color:'#d1fae5'},
-  {r:13,c:1,  w:5, h:5, icon:'🤝', name:'상담실',    color:'#dcfce7'},
-  {r:13,c:13, w:5, h:5, icon:'💊', name:'약국',      color:'#fce7f3'},
-  {r:13,c:25, w:5, h:5, icon:'🛗', name:'엘리베이터',color:'#e2e8f0'},
-  {r:19,c:7,  w:5, h:5, icon:'📋', name:'접수·수납', color:'#bbf7d0'},
-  {r:19,c:19, w:5, h:5, icon:'🦴', name:'정형외과',  color:'#dbeafe'}
+  {r:1, c:8,  w:5, h:5, icon:'🩸', name:'채혈실',    color:'#fee2e2'},
+  {r:1, c:15, w:5, h:5, icon:'🩺', name:'진료실1',   color:'#d1fae5'},
+  {r:1, c:22, w:5, h:5, icon:'🫁', name:'방사선과',  color:'#ede9fe'},
+  {r:1, c:29, w:5, h:5, icon:'✚',  name:'내과',      color:'#dbeafe'},
+  {r:8, c:1,  w:5, h:5, icon:'💉', name:'주사실',    color:'#dbeafe'},
+  {r:8, c:15, w:5, h:5, icon:'🛋', name:'대기실',    color:'#fdf1e3'},
+  {r:8, c:20, w:5, h:5, icon:'🩺', name:'진료실2',   color:'#fde4cf'},
+  {r:8, c:29, w:5, h:5, icon:'👁', name:'안과',      color:'#d1fae5'},
+  {r:15,c:1,  w:5, h:5, icon:'🤝', name:'상담실',    color:'#dcfce7'},
+  {r:15,c:15, w:5, h:5, icon:'💊', name:'약국',      color:'#fce7f3'},
+  {r:15,c:29, w:5, h:5, icon:'🛗', name:'엘리베이터',color:'#e2e8f0'},
+  {r:22,c:8,  w:5, h:5, icon:'📋', name:'접수·수납', color:'#bbf7d0'},
+  {r:22,c:22, w:5, h:5, icon:'🦴', name:'정형외과',  color:'#dbeafe'}
 ];
 // 목표 세트 3개 — 다시 도전할 때마다 다른 목표로 바뀜. 손떨림 강도는
 // 세트 안에서 뒤로 갈수록(=마지막 레벨일수록) 슬라이더로 고른 값까지 점점 세짐.
@@ -361,7 +361,7 @@ var MISSION_SETS=[
   ['접수·수납','상담실','내과','정형외과','화장실']
 ];
 var MISSIONS=[];
-var ENT_R=29, ENT_C=8;
+var ENT_R=33, ENT_C=10;
 
 var mCvs,mCtx,mCW,mCH,mMap,mPts,mJitPt,mDraw,mIdx,mHits,mDone,mBombActive,mLevel=0,mMaxLevel=0,mSetIdx=-1;
 // 터치 중(touchmove 콜백) 안에서 DOM을 직접 건드리면 일부 모바일 브라우저가
@@ -395,18 +395,17 @@ function buildMazeMap(){
   function openRect(r1,r2,c1,c2){
     for(var rr=r1;rr<=r2;rr++) for(var cc=c1;cc<=c2;cc++) mMap[rr][cc]=0;
   }
-  // 방이 놓이는 4개의 가로 띠와, 그 사이사이 복도 4줄을 전부 열어둔 뒤
+  // 방이 놓이는 4개의 가로 띠와, 그 사이사이 2칸 폭 복도를 전부 열어둔 뒤
   // 방 자리만 다시 벽으로 덮는다 — 방이 없는 칸은 자동으로 복도(광장)가 된다.
-  // 방이 5x5로 커진 만큼 띠도 넓어지고, 그 사이 복도는 1칸으로 좁아진다.
-  openRect(1,5,   1,29); // 1행 방 띠
-  openRect(6,6,   1,29); // 복도
-  openRect(7,11,  1,29); // 2행 방 띠
-  openRect(12,12, 1,29); // 복도
-  openRect(13,17, 1,29); // 3행 방 띠
-  openRect(18,18, 1,29); // 복도
-  openRect(19,23, 1,29); // 4행 방 띠
-  openRect(24,24, 1,29); // 복도
-  openRect(25,29, 7,11); // 입구로 이어지는 복도
+  openRect(1,5,   1,33); // 1행 방 띠
+  openRect(6,7,   1,33); // 복도
+  openRect(8,12,  1,33); // 2행 방 띠
+  openRect(13,14, 1,33); // 복도
+  openRect(15,19, 1,33); // 3행 방 띠
+  openRect(20,21, 1,33); // 복도
+  openRect(22,26, 1,33); // 4행 방 띠
+  openRect(27,28, 1,33); // 복도
+  openRect(29,33, 8,12); // 입구로 이어지는 복도
   ROOMS.forEach(function(rm){
     for(var rr=rm.r; rr<rm.r+rm.h; rr++) for(var cc=rm.c; cc<rm.c+rm.w; cc++)
       if(rr>=0&&rr<PR&&cc>=0&&cc<PC) mMap[rr][cc]=1;
