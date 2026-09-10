@@ -302,7 +302,7 @@ var LV_AMP=[0,10,26];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
-var W_LV_AMP=[0,1.4,3.2];
+var W_LV_AMP=[0,4,9];
 function makeTremor(ampArr){
   var amps=ampArr||LV_AMP;
   return function(x,y,level){
@@ -531,8 +531,16 @@ function mHandleMove(clientX,clientY){
     cvs=document.getElementById('mazeCvs');
     cvs.addEventListener('touchstart',function(e){
       if(mBombActive||!e.touches[0]) return;
-      var t=e.touches[0], raw=mPtc(t.clientX,t.clientY), last=mPts[mPts.length-1];
-      if(Math.abs(raw.r-last.r)<=3 && Math.abs(raw.c-last.c)<=3) mDraw=true;
+      // 목표에 도착하면 "🎉 클리어" 토스트를 보려고 손가락을 뗐다가 다시
+      // 누르는 게 자연스러운 동작인데, 예전엔 손을 뗀 자리 근처(격자 3칸
+      // 이내)로만 다시 눌러야 그리기가 재개됐다 — 조금이라도 다른 곳을
+      // 누르면 이후 모든 터치가 조용히 무시되어 화면이 멈춘 것처럼 보였다.
+      // 이게 여러 번의 "멈춤" 수정에도 계속 남아있던 진짜 원인이었다.
+      // 이제 어디를 다시 눌러도 바로 그리기가 재개되게 한다.
+      var t=e.touches[0], raw=mPtc(t.clientX,t.clientY);
+      mDraw=true;
+      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
+      mNeedsDraw=true;
       e.preventDefault();
     },{passive:false});
     cvs.addEventListener('touchmove',function(e){ if(e.touches[0]) mHandleMove(e.touches[0].clientX,e.touches[0].clientY); e.preventDefault(); },{passive:false});
@@ -540,8 +548,10 @@ function mHandleMove(clientX,clientY){
     cvs.addEventListener('touchcancel',function(e){ mDraw=false; },{passive:true});
     cvs.addEventListener('mousedown',function(e){
       if(mBombActive) return;
-      var raw=mPtc(e.clientX,e.clientY), last=mPts[mPts.length-1];
-      if(Math.abs(raw.r-last.r)<=3 && Math.abs(raw.c-last.c)<=3) mDraw=true;
+      var raw=mPtc(e.clientX,e.clientY);
+      mDraw=true;
+      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
+      mNeedsDraw=true;
     });
     cvs.addEventListener('mousemove',function(e){ mHandleMove(e.clientX,e.clientY); });
     window.addEventListener('mouseup',function(){ mDraw=false; });
