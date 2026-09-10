@@ -302,22 +302,22 @@ var LV_AMP=[0,10,26];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
-var W_LV_AMP=[0,2,4.5];
+var W_LV_AMP=[0,1.4,3.2];
 function makeTremor(ampArr){
   var amps=ampArr||LV_AMP;
   return function(x,y,level){
     if(level===0) return {x:x,y:y};
     var amp=amps[level];
-    // 실제 본태성 손떨림 주파수(약 4~6Hz)에 가까운 저주파 흔들림 위주로
-    // 구성한다. 예전 방식은 "이동 이벤트 횟수"마다 위상을 진행시켰는데,
-    // 손을 천천히·꼼꼼하게 움직일수록(=글씨를 쓸 때) 이벤트가 짧은 거리
-    // 안에 촘촘히 몰려 떨림이 비현실적으로 꼬불꼬불해지는 문제가 있었다.
-    // 실제 경과 시간(performance.now) 기준으로 바꿔서 손 움직임 속도와
-    // 무관하게 항상 같은 속도로 흔들리게 하고, 고주파 성분도 줄였다.
+    // 실제 경과 시간(performance.now) 기준으로 위상을 진행시켜, 손을
+    // 천천히 움직여도(=글씨를 쓸 때) 비현실적으로 촘촘해지지 않게 한다.
+    // x/y를 서로 다른 주파수로 따로따로 흔들면 리사주 도형처럼 동그랗게
+    // 말려서 "꼬불꼬불"해 보이므로, 두 축을 거의 같은 위상(w)으로 묶어서
+    // 한쪽으로 왔다갔다 떠는 느낌만 나게 하고 아주 약한 보조 성분만 더한다.
     var t=performance.now()/1000;
-    var f=4.2+level*0.7;
-    var nx=Math.sin(t*2*Math.PI*f)*amp*0.72+Math.sin(t*2*Math.PI*f*1.8+0.6)*amp*0.28;
-    var ny=Math.sin(t*2*Math.PI*f*0.88+1.4)*amp*0.72+Math.sin(t*2*Math.PI*f*1.6+2.2)*amp*0.28;
+    var f=3.0+level*0.4;
+    var w=Math.sin(t*2*Math.PI*f);
+    var nx=w*amp*0.4;
+    var ny=w*amp*0.85+Math.sin(t*2*Math.PI*f*2.3+0.8)*amp*0.1;
     return {x:x+nx,y:y+ny,dev:Math.hypot(nx,ny)};
   };
 }
