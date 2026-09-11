@@ -199,7 +199,7 @@ input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;ba
         <canvas id="mazeCvs"></canvas>
       </div>
     </div>
-    <div class="maze-hint">&#128070; 파란 유도선을 손끝으로 따라 그어보세요 &middot; 선에서 너무 벗어나면 이 구간 처음부터 다시예요</div>
+    <div class="maze-hint">&#128070; 파란 유도선을 손끝으로 따라 그어보세요 &middot; 선에서 너무 벗어나도 그 자리부터 다시 이어가면 돼요</div>
     <div class="maze-stats">
       <div class="mstat"><div class="mv" id="mvHits">0</div><div class="ml">다른 방으로 잘못 감</div></div>
       <div class="mstat"><div class="mv" id="mvDone">0/5</div><div class="ml">완료한 곳</div></div>
@@ -504,7 +504,7 @@ function distToPolyline(px,py,pts){
 }
 
 var mCvs,mCtx,mCW,mCH,mPts,mJitPt,mDraw,mIdx,mHits,mBombActive,mLevel=0,mMaxLevel=0,mSetIdx=-1;
-var mLegPath=null, mLegStartPt=null, mPathTol=0, mGoalRadius=0;
+var mLegPath=null, mPathTol=0, mGoalRadius=0;
 // 터치 중(touchmove 콜백) 안에서 DOM을 직접 건드리면 일부 모바일 브라우저가
 // 제스처를 취소해서 화면이 멈춘 것처럼 보이는 문제가 있었다. 그래서 터치
 // 핸들러는 상태값만 갱신하고, 실제 그리기/DOM 갱신은 전부 터치 이벤트와
@@ -554,7 +554,6 @@ function initMaze(){
     mCtx=mCvs.getContext('2d');
     var ep=entrancePx(), epRC=pxToRC(ep.x,ep.y);
     mPts=[{x:ep.x,y:ep.y,r:epRC.r,c:epRC.c}];
-    mLegStartPt={x:ep.x,y:ep.y};
     var firstRoom=roomByName(MISSIONS[0].n);
     mLegPath=mBuildLegPath(null,firstRoom,true);
     drawMaze();
@@ -576,7 +575,7 @@ function mLoopTick(){
       } else if(ev.type==='fail'){
         mHits++;
         var hv=document.getElementById('mvHits'); if(hv) hv.textContent=mHits;
-        mazeToast('❌ 유도선을 벗어났어요! 이 구간 처음부터 다시');
+        mazeToast('❌ 유도선을 벗어났어요! 그 자리부터 다시 이어보세요');
         mBombActive=true;
         mFailAnim={start:performance.now(), x:ev.x, y:ev.y};
       }
@@ -586,8 +585,11 @@ function mLoopTick(){
       mNeedsDraw=true;
       if(performance.now()-mFailAnim.start>=400){
         mFailAnim=null; mBombActive=false;
-        var sp=mLegStartPt, spRC=pxToRC(sp.x,sp.y);
-        mPts=[{x:sp.x,y:sp.y,r:spRC.r,c:spRC.c}];
+        // 실패해도 구간 처음으로 되돌리지 않는다 — mPts는 벗어나기 직전
+        // 마지막으로 유효했던 지점에서 이미 멈춰 있으므로(mHandleMove의
+        // 실패 분기는 mPts에 아무것도 추가하지 않는다), 그대로 두면 바로
+        // 그 자리부터 이어 그릴 수 있다. 긴 중증 구간에서 막판에 한 번
+        // 삐끗했다고 처음부터 다시 그려야 하는 좌절감을 없애기 위함.
         mJitPt=null; mNeedsDraw=true;
       }
     }
@@ -703,7 +705,6 @@ function mDoArriveSuccess(){
   // 것도 막고, 다음 단계 선이 이전 단계 끝점과 이어져 보이는 것도 막는다.
   var startPx=mPts[mPts.length-1];
   mPts=[startPx];
-  mLegStartPt={x:startPx.x,y:startPx.y};
   document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
   mUpdMLevel();
   mRefreshMbar();
