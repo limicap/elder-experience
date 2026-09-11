@@ -298,16 +298,21 @@ function goWrite(){ showScr('scr-write'); wStart(); }
    ════════════════════════════════════════════ */
 var LV_LABEL=['정상','경증','중증'];
 var LV_CLASS=['lv0','lv1','lv2'];
-// 떨림이 실제 도착/오답 판정에 쓰이므로, 복도 폭(2칸, 칸당 약 10px)보다
-// 지나치게 커지면 거의 항상 실패해버린다 — 눈에 띄게 흔들리면서도 중증에서
-// 조심해서 움직이면 통과할 수 있는 수준으로 맞춘다.
-var LV_AMP=[0,7,15];
+// 떨림이 실제 도착/오답 판정에 쓰이므로, 복도 폭(2칸)보다 지나치게 커지면
+// 거의 항상 실패해버린다 — 눈에 띄게 흔들리면서도 중증에서 조심해서
+// 움직이면 통과할 수 있는 수준으로 맞춘다. 미로 캔버스는 고해상도 화면에서
+// 선명하게 보이도록 devicePixelRatio만큼 캔버스 내부 해상도를 키우는데(아래
+// mCW 계산 참고), 떨림 폭을 고정 픽셀 값으로 두면 그 배율만큼 화면에는 더
+// 작게(실제 절반 이하로) 보이는 문제가 있었다 — 칸 크기(mCW)에 대한 비율로
+// 두고 실제 칸 크기가 정해질 때 픽셀 값으로 환산해서 항상 화면에 같은
+// 비율로 보이게 한다.
+var LV_AMP_FRAC=[0,0.9,1.9];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
 var W_LV_AMP=[0,6.5,13];
 function makeTremor(ampArr){
-  var amps=ampArr||LV_AMP;
+  var amps=ampArr||W_LV_AMP;
   return function(x,y,level){
     if(level===0) return {x:x,y:y};
     var amp=amps[level];
@@ -355,8 +360,11 @@ var ROOMS=[
 ];
 // 목표 세트 3개 — 다시 도전할 때마다 다른 목표로 바뀜. 손떨림 강도는
 // 세트 안에서 뒤로 갈수록(=마지막 레벨일수록) 슬라이더로 고른 값까지 점점 세짐.
+// 첫 세트의 마지막 목표(가장 심한 중증 단계)는 직전 목표인 방사선과
+// 바로 근처가 아니라 대각선 반대쪽 먼 방으로 잡아서, 가장 떨림이 심한
+// 구간에서 실제로 먼 거리를 이동하며 조심해야 하게 했다.
 var MISSION_SETS=[
-  ['접수·수납','채혈실','진료실1','방사선과','약국'],
+  ['접수·수납','채혈실','진료실1','방사선과','상담실'],
   ['접수·수납','주사실','대기실','안과','엘리베이터'],
   ['접수·수납','상담실','내과','정형외과','화장실']
 ];
@@ -369,7 +377,9 @@ var mCvs,mCtx,mCW,mCH,mMap,mPts,mJitPt,mDraw,mIdx,mHits,mDone,mBombActive,mLevel
 // 핸들러는 상태값만 갱신하고, 실제 그리기/DOM 갱신은 전부 터치 이벤트와
 // 무관하게 계속 도는 requestAnimationFrame 루프(mLoopTick) 안에서만 한다.
 var mPendingEvent=null, mFailAnim=null, mNeedsDraw=true, mLoopRunning=false;
-var mTremor=makeTremor();
+// initMaze()가 실제 칸 크기(mCW)를 알고 나면 곧바로 다시 만든다 — 아래
+// 플레이스홀더는 그 전까지만 쓰이는 값이라 크기가 정확하지 않아도 된다.
+var mTremor=makeTremor([0,7,15]);
 
 function mBuildMissionSet(){
   mSetIdx=(mSetIdx+1)%MISSION_SETS.length;
@@ -427,6 +437,10 @@ function initMaze(){
     var aW=area.clientWidth||340, aH=area.clientHeight||340;
     var dpr=Math.min(2,window.devicePixelRatio||1);
     mCW=Math.max(1,Math.floor(aW*dpr/PC)); mCH=Math.max(1,Math.floor(aH*dpr/PR));
+    // 칸 크기가 정해졌으니 떨림 폭(비율)을 실제 픽셀 값으로 환산해서 다시
+    // 만든다 — 고정 픽셀 값이면 고해상도 화면(dpr 2배)에서 캔버스 해상도만
+    // 커지고 화면에 보이는 크기는 그대로라, 떨림이 절반 이하로 작아 보인다.
+    mTremor=makeTremor(LV_AMP_FRAC.map(function(f){ return f*mCW; }));
     mCvs=document.getElementById('mazeCvs');
     mCvs.width=mCW*PC; mCvs.height=mCH*PR;
     mCtx=mCvs.getContext('2d');
