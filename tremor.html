@@ -314,6 +314,13 @@ var LV_CLASS=['lv0','lv1','lv2'];
 // 크기(mCW)에 대한 비율로 두고 실제 칸 크기가 정해질 때 픽셀 값으로
 // 환산해서 항상 화면에 같은 비율로 보이게 한다.
 var LV_AMP_FRAC=[0,0.32,0.48];
+// 유도선 허용 오차(mPathTol)도 떨림 단계마다 다르게 둔다 — 예전엔 항상
+// 1.3배로 고정이라, 최고 단계(중증)에서도 실제 떨림 폭(대략 amp*1.03,
+// 0.48*1.03≈0.49)보다 허용치가 훨씬 넓어서 "대충 죽죽 그어도 거의 안
+// 틀리는" 문제가 있었다. 단계가 올라갈수록 허용치를 실제 떨림 폭에
+// 바짝 붙여서, 중증에서는 중앙을 잘 유지해야만 통과하고 벽에 바짝
+// 붙이거나 방향을 틀 때 살짝만 밀려도 바로 실패하게 한다.
+var PATH_TOL_FRAC=[1.3,0.8,0.62];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
@@ -405,10 +412,15 @@ function entrancePx(){ return {x:nodeCenterPx(ENT_ANCHOR.lr,ENT_ANCHOR.lc).x, y:
 // 목표 세트 3개 — 다시 도전할 때마다 다른 목표로 바뀜. 미로 자체가
 // 시작점→목표까지 유일한 경로를 강제하므로, 어느 방을 순서대로 골라도
 // 항상 실제로 꺾어가야 하는 winding 경로가 나온다.
+// mIdx→떨림 단계는 mStageLevel이 0,1,1,2,2로 매긴다 — 즉 인덱스 2→3,
+// 3→4 구간(각 세트의 마지막 두 번의 이동)이 "중증" 단계다. 이 두 구간의
+// 목적지는 항상 4x4 격자에서 맨해튼 거리가 먼(최소 3칸 이상, 대부분
+// 4~5칸) 방이 되도록 세트를 짰다 — 안 그러면 가장 떨림이 심한 단계인데
+// 목적지가 바로 옆방이라 너무 쉬워지는 문제가 있었다.
 var MISSION_SETS=[
-  ['접수·수납','채혈실','진료실1','방사선과','약국'],
-  ['접수·수납','주사실','대기실','안과','엘리베이터'],
-  ['접수·수납','상담실','내과','정형외과','화장실']
+  ['접수·수납','채혈실','대기실','진료실1','상담실'],
+  ['접수·수납','주사실','엘리베이터','내과','정형외과'],
+  ['접수·수납','안과','방사선과','약국','화장실']
 ];
 var MISSIONS=[];
 
@@ -532,7 +544,7 @@ function initMaze(){
     // 만든다 — 고정 픽셀 값이면 고해상도 화면(dpr 2배)에서 캔버스 해상도만
     // 커지고 화면에 보이는 크기는 그대로라, 떨림이 절반 이하로 작아 보인다.
     mTremor=makeTremor(LV_AMP_FRAC.map(function(f){ return f*mCW; }));
-    mPathTol=1.3*mCW; mGoalRadius=1.15*mCW;
+    mPathTol=PATH_TOL_FRAC[mLevel]*mCW; mGoalRadius=1.15*mCW;
     mCvs=document.getElementById('mazeCvs');
     mCvs.width=mCW*PC; mCvs.height=mCH*PR;
     mCtx=mCvs.getContext('2d');
@@ -596,6 +608,7 @@ function mUpdMLevel(){
   mLevel=mStageLevel(mIdx);
   var b=document.getElementById('mBadge');
   b.textContent=LV_LABEL[mLevel]; b.className='lvbadge '+LV_CLASS[mLevel];
+  if(mCW) mPathTol=PATH_TOL_FRAC[mLevel]*mCW; // 단계가 바뀔 때마다 허용 오차도 같이 좁힌다
 }
 function mPtc(clientX,clientY){
   var rect=mCvs.getBoundingClientRect();
