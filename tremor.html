@@ -199,7 +199,7 @@ input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;ba
         <canvas id="mazeCvs"></canvas>
       </div>
     </div>
-    <div class="maze-hint">&#128070; 입구에서부터 목표 방까지 손끝으로 길을 따라 그어보세요 &middot; 다른 방에 들어가면 처음부터 다시예요</div>
+    <div class="maze-hint">&#128070; 파란 유도선을 손끝으로 따라 그어보세요 &middot; 선에서 너무 벗어나면 이 구간 처음부터 다시예요</div>
     <div class="maze-stats">
       <div class="mstat"><div class="mv" id="mvHits">0</div><div class="ml">다른 방으로 잘못 감</div></div>
       <div class="mstat"><div class="mv" id="mvDone">0/5</div><div class="ml">완료한 곳</div></div>
@@ -298,15 +298,22 @@ function goWrite(){ showScr('scr-write'); wStart(); }
    ════════════════════════════════════════════ */
 var LV_LABEL=['정상','경증','중증'];
 var LV_CLASS=['lv0','lv1','lv2'];
-// 떨림이 실제 도착/오답 판정에 쓰이므로, 복도 폭(2칸)보다 지나치게 커지면
-// 거의 항상 실패해버린다 — 눈에 띄게 흔들리면서도 중증에서 조심해서
-// 움직이면 통과할 수 있는 수준으로 맞춘다. 미로 캔버스는 고해상도 화면에서
-// 선명하게 보이도록 devicePixelRatio만큼 캔버스 내부 해상도를 키우는데(아래
-// mCW 계산 참고), 떨림 폭을 고정 픽셀 값으로 두면 그 배율만큼 화면에는 더
-// 작게(실제 절반 이하로) 보이는 문제가 있었다 — 칸 크기(mCW)에 대한 비율로
-// 두고 실제 칸 크기가 정해질 때 픽셀 값으로 환산해서 항상 화면에 같은
-// 비율로 보이게 한다.
-var LV_AMP_FRAC=[0,0.9,1.9];
+// 떨림 폭(진폭)이 복도 폭보다 지나치게 크면, 아무리 중앙을 잘 유지해도
+// 순간적으로 반드시 경계를 넘어가서 "운"에 따라 성공/실패가 갈리는
+// 느낌이 된다. 2칸 폭 복도는 직선 구간만 따져도 중앙에서 벽까지 실제
+// 여유가 1칸 정도뿐이고, 꺾이는 지점(모서리)에서는 그보다도 더 좁아진다
+// — 특히 미션 순서가 항상 대각선으로 멀리 건너뛰게 짜여 있어(아래
+// MISSION_SETS 참고) 긴 직선 복도 구간을 반드시 지나가야 한다. 가장
+// 먼 구간까지 12번 반복 실측(코너 포함)해서 "중앙을 유지하며 그으면
+// 항상 통과, 대충 그으면 실패"가 되는 수치를 찾은 값이 아래 계수다 —
+// 칸 크기(mCW)에 대한 비율이고, 실제 최대 흔들림 폭은 대략 amp*1.03이다
+// (아래 makeTremor의 계수 0.4/0.85/0.1에서 유도).
+// 미로 캔버스는 고해상도 화면에서 선명하게 보이도록 devicePixelRatio만큼
+// 캔버스 내부 해상도를 키우는데(아래 mCW 계산 참고), 떨림 폭을 고정 픽셀
+// 값으로 두면 그 배율만큼 화면에는 더 작게 보이는 문제가 있었다 — 칸
+// 크기(mCW)에 대한 비율로 두고 실제 칸 크기가 정해질 때 픽셀 값으로
+// 환산해서 항상 화면에 같은 비율로 보이게 한다.
+var LV_AMP_FRAC=[0,0.32,0.48];
 // 글쓰기 캔버스는 미로보다 훨씬 촘촘한 작업(글씨)이라 같은 픽셀 크기의
 // 흔들림이어도 훨씬 과장돼 보인다 — 실제 손떨림 필적에 가깝게 훨씬 작은
 // 값을 따로 쓴다.
@@ -332,46 +339,155 @@ function makeTremor(ampArr){
 
 /* ════════════════════════════════════════════
    미로 통과 · 병원 길찾기
-   30x30 "city block" 격자 — 방은 전부 독립된 블록으로 사방이 복도로
-   띄워져 있고, 바깥 테두리가 아니라 안쪽 복도망(가로 4줄 + 세로 4줄)을
-   통해서만 서로 연결됨. 대기실·진료실2만 예외로 서로 붙여뒀고 나머지는
-   전부 사이를 띄워 복도를 두었음.
-   접수·수납→채혈실→진료실1→방사선과→약국
+   진짜 미로(recursive-backtracker로 생성한 완전 미로)를 5x5 "복도" 칸
+   위에 만들고, 방(진료실/화장실 등)은 그 복도 격자에 속하지 않는 별도의
+   곁방(alcove)으로 복도 한 칸의 한쪽 면에 문 하나로만 붙인다 — 즉 방은
+   경로상 반드시 "막다른 끝"이고, 다른 방으로 가는 도중에 통과하는 중간
+   칸이 될 수 없다. (예전 버전은 방도 복도와 똑같은 격자 칸이라, 목적지가
+   아닌 다른 방의 한가운데를 유도선이 그대로 가로지르는 문제가 있었다 —
+   "벽이 중간에 있고 방이 막고 있으면 어떻게 뚫고 가냐"는 피드백이 바로
+   이 문제였다.) 시작점부터 목표 방까지, 복도 격자를 통과하는 단 하나의
+   경로를 찾아 "유도선"으로 화면에 항상 표시하고, 손끝(떨리는 채로)이 그
+   선에서 너무 멀어지면 실패 — room 사각형 충돌이 아니라 "선을 잘
+   따라가는지"로 판정한다. 미로 구조 자체는 고정 시드로 한 번만 만들어서
+   실제 건물처럼 항상 같은 복도가 나오고, 목표 순서(MISSION_SETS)만 매 판
+   바뀐다.
    ════════════════════════════════════════════ */
-// 방은 5x5로 크게, 그 사이 복도는 2칸으로 — 너무 좁으면(1칸) 접수·수납처럼
-// 방을 갓 나설 때부터 옆방에 닿기 딱 좋아서 "조심하면 지나갈 수 있는" 정도가
-// 아니라 거의 항상 실패하게 된다. 2칸 폭을 확보하려고 격자도 30→34로 키웠다.
-var PR=34, PC=34;
-var ROOMS=[
-  {r:1, c:1,  w:5, h:5, icon:'🚻', name:'화장실',    color:'#dbeafe'},
-  {r:1, c:8,  w:5, h:5, icon:'🩸', name:'채혈실',    color:'#fee2e2'},
-  {r:1, c:15, w:5, h:5, icon:'🩺', name:'진료실1',   color:'#d1fae5'},
-  {r:1, c:22, w:5, h:5, icon:'🫁', name:'방사선과',  color:'#ede9fe'},
-  {r:1, c:29, w:5, h:5, icon:'✚',  name:'내과',      color:'#dbeafe'},
-  {r:8, c:1,  w:5, h:5, icon:'💉', name:'주사실',    color:'#dbeafe'},
-  {r:8, c:15, w:5, h:5, icon:'🛋', name:'대기실',    color:'#fdf1e3'},
-  {r:8, c:20, w:5, h:5, icon:'🩺', name:'진료실2',   color:'#fde4cf'},
-  {r:8, c:29, w:5, h:5, icon:'👁', name:'안과',      color:'#d1fae5'},
-  {r:15,c:1,  w:5, h:5, icon:'🤝', name:'상담실',    color:'#dcfce7'},
-  {r:15,c:15, w:5, h:5, icon:'💊', name:'약국',      color:'#fce7f3'},
-  {r:15,c:29, w:5, h:5, icon:'🛗', name:'엘리베이터',color:'#e2e8f0'},
-  {r:22,c:8,  w:5, h:5, icon:'📋', name:'접수·수납', color:'#bbf7d0'},
-  {r:22,c:22, w:5, h:5, icon:'🦴', name:'정형외과',  color:'#dbeafe'}
+var HG=5, CELL=5, WALLG=3, DOOR=3, ROOM_D=6, BORDER=1;
+// 복도 격자 바깥쪽(위/왼쪽)에 방 한 칸 깊이(ROOM_D)+문(DOOR)만큼 여백을
+// 두고, 그 안에 실제 복도 격자를 배치한다. 오른쪽/아래쪽도 같은 여백을
+// 그대로 써서 동/남쪽에 붙는 방과 입구 자리도 모자라지 않게 한다.
+var MARGIN=BORDER+ROOM_D+DOOR;
+var HGRID_SPAN=HG*CELL+(HG-1)*WALLG;
+var PC=MARGIN*2+HGRID_SPAN, PR=MARGIN*2+HGRID_SPAN;
+
+// side: 이 방이 복도 칸(hr,hc)의 어느 쪽 면에 문 하나로 붙어있는지
+// (N/S/E/W). 어느 side든 항상 "출입구 하나뿐인 막다른 방"이라는 점은
+// 같다 — 유도선이 통과 중간에 이 방을 가로지르는 일은 구조적으로
+// 생길 수 없다.
+var ROOM_DEFS=[
+  {hr:0,hc:0, side:'N', icon:'🚻', name:'화장실',    color:'#dbeafe'},
+  {hr:0,hc:1, side:'N', icon:'🩸', name:'채혈실',    color:'#fee2e2'},
+  {hr:0,hc:2, side:'N', icon:'🩺', name:'진료실1',   color:'#d1fae5'},
+  {hr:0,hc:3, side:'N', icon:'🫁', name:'방사선과',  color:'#ede9fe'},
+  {hr:0,hc:4, side:'N', icon:'✚',  name:'내과',      color:'#dbeafe'},
+  {hr:1,hc:4, side:'E', icon:'💉', name:'주사실',    color:'#dbeafe'},
+  {hr:2,hc:4, side:'E', icon:'👁', name:'안과',      color:'#d1fae5'},
+  {hr:3,hc:4, side:'E', icon:'🛗', name:'엘리베이터',color:'#e2e8f0'},
+  {hr:4,hc:3, side:'S', icon:'🦴', name:'정형외과',  color:'#dbeafe'},
+  {hr:4,hc:1, side:'S', icon:'📋', name:'접수·수납', color:'#bbf7d0'},
+  {hr:4,hc:0, side:'S', icon:'🛋', name:'대기실',    color:'#fdf1e3'},
+  {hr:1,hc:0, side:'W', icon:'🤝', name:'상담실',    color:'#dcfce7'},
+  {hr:2,hc:0, side:'W', icon:'🩺', name:'진료실2',   color:'#fde4cf'},
+  {hr:3,hc:0, side:'W', icon:'💊', name:'약국',      color:'#fce7f3'}
 ];
-// 목표 세트 3개 — 다시 도전할 때마다 다른 목표로 바뀜. 손떨림 강도는
-// 세트 안에서 뒤로 갈수록(=마지막 레벨일수록) 슬라이더로 고른 값까지 점점 세짐.
-// 첫 세트의 마지막 목표(가장 심한 중증 단계)는 직전 목표인 방사선과
-// 바로 근처가 아니라 대각선 반대쪽 먼 방으로 잡아서, 가장 떨림이 심한
-// 구간에서 실제로 먼 거리를 이동하며 조심해야 하게 했다.
+var ROOMS=ROOM_DEFS; // 아이콘/이름/좌표 조회용 그대로 사용
+function roomByName(name){ return ROOMS.filter(function(r){return r.name===name;})[0]; }
+// 입구도 방과 똑같이 복도 칸 남쪽 면에 문 하나로 붙은 곁방 취급 —
+// 다만 색이 다르고 문 아이콘이 따로 붙는다(아래 drawMaze 참고).
+var ENT_SLOT={hr:HG-1, hc:2, side:'S'};
+
+// 목표 세트 3개 — 다시 도전할 때마다 다른 목표로 바뀜. 미로 자체가
+// 시작점→목표까지 유일한 경로를 강제하므로, 어느 방을 순서대로 골라도
+// 항상 실제로 꺾어가야 하는 winding 경로가 나온다.
 var MISSION_SETS=[
-  ['접수·수납','채혈실','진료실1','방사선과','상담실'],
+  ['접수·수납','채혈실','진료실1','방사선과','약국'],
   ['접수·수납','주사실','대기실','안과','엘리베이터'],
   ['접수·수납','상담실','내과','정형외과','화장실']
 ];
 var MISSIONS=[];
-var ENT_R=33, ENT_C=10;
 
-var mCvs,mCtx,mCW,mCH,mMap,mPts,mJitPt,mDraw,mIdx,mHits,mDone,mBombActive,mLevel=0,mMaxLevel=0,mSetIdx=-1;
+// ── 복도 미로 생성 (recursive backtracker, 고정 시드 — 항상 같은 구조) ──
+// 방은 이 그래프에 아예 끼지 않는다(막다른 곁방이라 경로 탐색 대상이
+// 될 필요가 없다) — 그래서 입구 칸을 억지로 그래프에 연결하려다 격자
+// 밖 이웃을 만들었던 예전 버그 같은 특수 케이스 처리도 필요 없다.
+function seededRng(seed){
+  var s=seed>>>0;
+  return function(){ s=(s*1664525+1013904223)>>>0; return s/4294967296; };
+}
+var MAZE_SEED=20260911;
+var mazeAdj; // mazeAdj[hr][hc] = {N,S,E,W: 그 방향 복도가 열려있는지}
+function generateMaze(){
+  var rng=seededRng(MAZE_SEED);
+  var visited=[]; mazeAdj=[];
+  for(var r=0;r<HG;r++){
+    visited[r]=[]; mazeAdj[r]=[];
+    for(var c=0;c<HG;c++){ visited[r][c]=false; mazeAdj[r][c]={N:false,S:false,E:false,W:false}; }
+  }
+  var stack=[[0,0]]; visited[0][0]=true;
+  while(stack.length){
+    var cur=stack[stack.length-1], r=cur[0], c=cur[1];
+    var nbrs=[];
+    if(r>0 && !visited[r-1][c]) nbrs.push(['N',r-1,c]);
+    if(r<HG-1 && !visited[r+1][c]) nbrs.push(['S',r+1,c]);
+    if(c>0 && !visited[r][c-1]) nbrs.push(['W',r,c-1]);
+    if(c<HG-1 && !visited[r][c+1]) nbrs.push(['E',r,c+1]);
+    if(!nbrs.length){ stack.pop(); continue; }
+    var pick=nbrs[Math.floor(rng()*nbrs.length)];
+    var dir=pick[0], nr=pick[1], nc=pick[2];
+    mazeAdj[r][c][dir]=true;
+    mazeAdj[nr][nc][{N:'S',S:'N',E:'W',W:'E'}[dir]]=true;
+    visited[nr][nc]=true;
+    stack.push([nr,nc]);
+  }
+}
+// 복도 그래프에서 두 칸 사이의 (유일한) 경로를 BFS로 찾는다
+function mazeBFS(fromCell,toCell){
+  function key(rc){ return rc.lr+','+rc.lc; }
+  var q=[fromCell], prev={}; prev[key(fromCell)]=null;
+  while(q.length){
+    var curc=q.shift();
+    if(curc.lr===toCell.lr && curc.lc===toCell.lc) break;
+    var adj=mazeAdj[curc.lr][curc.lc], nbrs=[];
+    if(adj.N) nbrs.push({lr:curc.lr-1,lc:curc.lc});
+    if(adj.S) nbrs.push({lr:curc.lr+1,lc:curc.lc});
+    if(adj.E) nbrs.push({lr:curc.lr,lc:curc.lc+1});
+    if(adj.W) nbrs.push({lr:curc.lr,lc:curc.lc-1});
+    nbrs.forEach(function(n){ var k=key(n); if(!(k in prev)){ prev[k]=curc; q.push(n); } });
+  }
+  if(!(key(toCell) in prev)) return null;
+  var path=[toCell], cur=toCell;
+  while(!(cur.lr===fromCell.lr && cur.lc===fromCell.lc)){ cur=prev[key(cur)]; path.push(cur); }
+  path.reverse();
+  return path;
+}
+function hCellTL(hr,hc){ return {r:MARGIN+hr*(CELL+WALLG), c:MARGIN+hc*(CELL+WALLG)}; }
+function hCellCenterPx(hr,hc){ var tl=hCellTL(hr,hc); return {x:(tl.c+CELL/2)*mCW, y:(tl.r+CELL/2)*mCH}; }
+// 방(곁방) 하나의 사각형 + 그 방을 복도에 잇는 문 틈을 side에 따라 계산.
+// 어느 side든 "복도 칸 한쪽 면에 문 하나로 붙은 막다른 칸"이라는 구조는 같다.
+function roomRect(slot){
+  var tl=hCellTL(slot.hr,slot.hc), side=slot.side;
+  if(side==='N') return {c:tl.c, r:tl.r-DOOR-ROOM_D, w:CELL, h:ROOM_D, doorC:tl.c, doorR:tl.r-DOOR, doorW:CELL, doorH:DOOR};
+  if(side==='S'){ var br=tl.r+CELL; return {c:tl.c, r:br+DOOR, w:CELL, h:ROOM_D, doorC:tl.c, doorR:br, doorW:CELL, doorH:DOOR}; }
+  if(side==='W') return {c:tl.c-DOOR-ROOM_D, r:tl.r, w:ROOM_D, h:CELL, doorC:tl.c-DOOR, doorR:tl.r, doorW:DOOR, doorH:CELL};
+  var rc=tl.c+CELL; return {c:rc+DOOR, r:tl.r, w:ROOM_D, h:CELL, doorC:rc, doorR:tl.r, doorW:DOOR, doorH:CELL};
+}
+function roomCenterPx(slot){ var rr=roomRect(slot); return {x:(rr.c+rr.w/2)*mCW, y:(rr.r+rr.h/2)*mCH}; }
+function entrancePx(){ var rr=roomRect(ENT_SLOT); return {x:(rr.c+rr.w/2)*mCW, y:(rr.r+rr.h-0.6)*mCH}; }
+// 시작 방→목표 방까지 복도를 통과하는 픽셀 좌표 유도선을 만든다. 방
+// 내부 좌표(roomCenterPx)는 맨 앞(출발)과 맨 뒤(도착)에만 들어가고,
+// 그 사이는 전부 복도 칸 중심이라 다른 방을 절대 가로지르지 않는다.
+function mBuildLegPath(fromSlot,toSlot,isFirstLeg){
+  var fromAnchor=isFirstLeg?{lr:ENT_SLOT.hr,lc:ENT_SLOT.hc}:{lr:fromSlot.hr,lc:fromSlot.hc};
+  var toAnchor={lr:toSlot.hr,lc:toSlot.hc};
+  var cellPath=mazeBFS(fromAnchor,toAnchor)||[fromAnchor,toAnchor];
+  var hallwayPx=cellPath.map(function(cell){ return hCellCenterPx(cell.lr,cell.lc); });
+  var px=isFirstLeg?[entrancePx()]:[roomCenterPx(fromSlot)];
+  return px.concat(hallwayPx).concat([roomCenterPx(toSlot)]);
+}
+function distToSegment(px,py,ax,ay,bx,by){
+  var dx=bx-ax, dy=by-ay, lenSq=dx*dx+dy*dy;
+  var t=lenSq>0?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/lenSq)):0;
+  return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+function distToPolyline(px,py,pts){
+  var min=Infinity;
+  for(var i=0;i<pts.length-1;i++){ var d=distToSegment(px,py,pts[i].x,pts[i].y,pts[i+1].x,pts[i+1].y); if(d<min) min=d; }
+  return min;
+}
+
+var mCvs,mCtx,mCW,mCH,mPts,mJitPt,mDraw,mIdx,mHits,mBombActive,mLevel=0,mMaxLevel=0,mSetIdx=-1;
+var mLegPath=null, mLegStartPt=null, mPathTol=0, mGoalRadius=0;
 // 터치 중(touchmove 콜백) 안에서 DOM을 직접 건드리면 일부 모바일 브라우저가
 // 제스처를 취소해서 화면이 멈춘 것처럼 보이는 문제가 있었다. 그래서 터치
 // 핸들러는 상태값만 갱신하고, 실제 그리기/DOM 갱신은 전부 터치 이벤트와
@@ -384,12 +500,8 @@ var mTremor=makeTremor([0,7,15]);
 function mBuildMissionSet(){
   mSetIdx=(mSetIdx+1)%MISSION_SETS.length;
   MISSIONS=MISSION_SETS[mSetIdx].map(function(nm){
-    var rm=ROOMS.filter(function(r){ return r.name===nm; })[0];
+    var rm=roomByName(nm);
     return {n:nm, ic:rm.icon};
-  });
-  ROOMS.forEach(function(rm){
-    rm.mi=-1;
-    MISSIONS.forEach(function(m,i){ if(m.n===rm.name) rm.mi=i; });
   });
 }
 // 목표 단계가 올라갈수록(mIdx) 손떨림도 슬라이더로 고른 최고 강도까지 점점 세짐
@@ -399,34 +511,12 @@ function mStageLevel(idx){
   return Math.min(mMaxLevel,Math.round(mMaxLevel*i/(MISSIONS.length-1)));
 }
 
-function buildMazeMap(){
-  mMap=[];
-  for(var r=0;r<PR;r++){ mMap[r]=[]; for(var c=0;c<PC;c++) mMap[r][c]=1; }
-  function openRect(r1,r2,c1,c2){
-    for(var rr=r1;rr<=r2;rr++) for(var cc=c1;cc<=c2;cc++) mMap[rr][cc]=0;
-  }
-  // 방이 놓이는 4개의 가로 띠와, 그 사이사이 2칸 폭 복도를 전부 열어둔 뒤
-  // 방 자리만 다시 벽으로 덮는다 — 방이 없는 칸은 자동으로 복도(광장)가 된다.
-  openRect(1,5,   1,33); // 1행 방 띠
-  openRect(6,7,   1,33); // 복도
-  openRect(8,12,  1,33); // 2행 방 띠
-  openRect(13,14, 1,33); // 복도
-  openRect(15,19, 1,33); // 3행 방 띠
-  openRect(20,21, 1,33); // 복도
-  openRect(22,26, 1,33); // 4행 방 띠
-  openRect(27,28, 1,33); // 복도
-  openRect(29,33, 8,12); // 입구로 이어지는 복도
-  ROOMS.forEach(function(rm){
-    for(var rr=rm.r; rr<rm.r+rm.h; rr++) for(var cc=rm.c; cc<rm.c+rm.w; cc++)
-      if(rr>=0&&rr<PR&&cc>=0&&cc<PC) mMap[rr][cc]=1;
-  });
-}
-
+function pxToRC(x,y){ return {r:Math.floor(y/mCH), c:Math.floor(x/mCW)}; }
 function initMaze(){
   mIdx=0; mHits=0; mBombActive=false; mDraw=false; mJitPt=null;
   mPendingEvent=null; mFailAnim=null; mNeedsDraw=true;
+  generateMaze();
   mBuildMissionSet();
-  buildMazeMap();
   document.getElementById('mSlider').value=2; onMSlider(2);
   document.getElementById('mvHits').textContent='0';
   document.getElementById('mvDone').textContent='0/'+MISSIONS.length;
@@ -441,10 +531,15 @@ function initMaze(){
     // 만든다 — 고정 픽셀 값이면 고해상도 화면(dpr 2배)에서 캔버스 해상도만
     // 커지고 화면에 보이는 크기는 그대로라, 떨림이 절반 이하로 작아 보인다.
     mTremor=makeTremor(LV_AMP_FRAC.map(function(f){ return f*mCW; }));
+    mPathTol=1.3*mCW; mGoalRadius=1.15*mCW;
     mCvs=document.getElementById('mazeCvs');
     mCvs.width=mCW*PC; mCvs.height=mCH*PR;
     mCtx=mCvs.getContext('2d');
-    mPts=[{x:ENT_C*mCW+mCW/2, y:ENT_R*mCH+mCH/2, r:ENT_R, c:ENT_C}];
+    var ep=entrancePx(), epRC=pxToRC(ep.x,ep.y);
+    mPts=[{x:ep.x,y:ep.y,r:epRC.r,c:epRC.c}];
+    mLegStartPt={x:ep.x,y:ep.y};
+    var firstRoom=roomByName(MISSIONS[0].n);
+    mLegPath=mBuildLegPath(null,firstRoom,true);
     drawMaze();
   });
   startMLoop();
@@ -464,7 +559,7 @@ function mLoopTick(){
       } else if(ev.type==='fail'){
         mHits++;
         var hv=document.getElementById('mvHits'); if(hv) hv.textContent=mHits;
-        mazeToast('❌ 여기는 '+ev.name+'이에요! 처음부터 다시');
+        mazeToast('❌ 유도선을 벗어났어요! 이 구간 처음부터 다시');
         mBombActive=true;
         mFailAnim={start:performance.now(), x:ev.x, y:ev.y};
       }
@@ -474,7 +569,8 @@ function mLoopTick(){
       mNeedsDraw=true;
       if(performance.now()-mFailAnim.start>=400){
         mFailAnim=null; mBombActive=false;
-        mPts=[{x:ENT_C*mCW+mCW/2,y:ENT_R*mCH+mCH/2,r:ENT_R,c:ENT_C}];
+        var sp=mLegStartPt, spRC=pxToRC(sp.x,sp.y);
+        mPts=[{x:sp.x,y:sp.y,r:spRC.r,c:spRC.c}];
         mJitPt=null; mNeedsDraw=true;
       }
     }
@@ -506,40 +602,32 @@ function mPtc(clientX,clientY){
   var x=(clientX-rect.left)*sx, y=(clientY-rect.top)*sy;
   return {x:x,y:y,r:Math.floor(y/mCH),c:Math.floor(x/mCW)};
 }
-function mRoomAt(r,c){
-  for(var i=0;i<ROOMS.length;i++){
-    var rm=ROOMS[i];
-    if(r>=rm.r && r<rm.r+rm.h && c>=rm.c && c<rm.c+rm.w) return rm;
-  }
-  return null;
-}
 function mHandleMove(clientX,clientY){
-  if(!mDraw||mBombActive) return;
+  if(!mDraw||mBombActive||!mLegPath) return;
   var raw=mPtc(clientX,clientY);
   if(raw.r<0||raw.r>=PR||raw.c<0||raw.c>=PC) return;
   var j=mTremor(raw.x,raw.y,mLevel);
   mJitPt={x:j.x,y:j.y};
-  // 도착/오답 판정은 흔들린(떨리는) 손끝 위치로 한다 — 손이 떨려서 옆방에
-  // 닿으면 그게 실제로 실패로 이어져야 체험 의미가 있다. (raw 좌표로
+  // 도착/이탈 판정은 흔들린(떨리는) 손끝 위치로 한다 — 손이 떨려서 유도선을
+  // 벗어나면 그게 실제로 실패로 이어져야 체험 의미가 있다. (raw 좌표로
   // 판정하면 화면에 흔들리는 게 보이든 말든 실제로는 아무 영향이 없어서
   // 손떨림 강도가 난이도와 무관해지는 문제가 있었다.)
   // 여기서는 DOM/캔버스를 절대 건드리지 않고 상태값만 갱신한다 — 실제 반영은
   // mLoopTick이 다음 애니메이션 프레임에서 처리한다.
-  var jr=Math.floor(j.y/mCH), jc=Math.floor(j.x/mCW);
-  var hitRoom=mRoomAt(jr,jc);
-  if(hitRoom && hitRoom.mi===mIdx){
+  var target=mLegPath[mLegPath.length-1];
+  var distToTarget=Math.hypot(j.x-target.x, j.y-target.y);
+  if(distToTarget<=mGoalRadius){
     if(!mPendingEvent) mPendingEvent={type:'success'};
     var last0=mPts[mPts.length-1];
     if(raw.r!==last0.r||raw.c!==last0.c) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
     mNeedsDraw=true;
     return;
   }
-  // 이미 완료한 방을 다시 지나가는 건 실패가 아니다 — 정답이 아니면서
-  // "완료 전" 방(장식용 방 포함, 아직 안 간 다른 미션 방 포함)만 오답 처리.
-  if(hitRoom && !(hitRoom.mi>=0 && hitRoom.mi<mIdx)){
+  var d=distToPolyline(j.x,j.y,mLegPath);
+  if(d>mPathTol){
     if(!mPendingEvent){
       mDraw=false;
-      mPendingEvent={type:'fail', x:j.x, y:j.y, name:hitRoom.name};
+      mPendingEvent={type:'fail', x:j.x, y:j.y};
     }
     mNeedsDraw=true;
     return;
@@ -589,15 +677,24 @@ function mHandleMove(clientX,clientY){
 // 체인을 새로 만들지 않기 위함.
 function mDoArriveSuccess(){
   if(mIdx>=MISSIONS.length) return;
+  var justRoom=roomByName(MISSIONS[mIdx].n);
   var nm=MISSIONS[mIdx].n; mIdx++;
   var justFinished=mIdx>=MISSIONS.length;
   // 단계를 깰 때마다 지금까지 그어온 선을 지우고, 방금 도착한 자리에서부터
   // 새로 시작한다 — 이전 단계 선이 계속 화면에 남아 지도가 지저분해지는
   // 것도 막고, 다음 단계 선이 이전 단계 끝점과 이어져 보이는 것도 막는다.
-  mPts=[mPts[mPts.length-1]];
+  var startPx=mPts[mPts.length-1];
+  mPts=[startPx];
+  mLegStartPt={x:startPx.x,y:startPx.y};
   document.getElementById('mvDone').textContent=mIdx+'/'+MISSIONS.length;
   mUpdMLevel();
   mRefreshMbar();
+  if(!justFinished){
+    var toRoom=roomByName(MISSIONS[mIdx].n);
+    mLegPath=mBuildLegPath(justRoom,toRoom,false);
+  } else {
+    mLegPath=null;
+  }
   if(justFinished){
     setTimeout(showMazeVictory,300);
   } else {
@@ -612,7 +709,12 @@ function mazeToast(msg){
   setTimeout(function(){ t.remove(); },1600);
 }
 function showMazeVictory(){
-  document.getElementById('mazeVictoryMsg').innerHTML='흔들리는 손으로 목적지를 모두 찾아가셨습니다!<br><br>다른 방으로 <b>'+mHits+'번</b> 잘못 들어가셨어요.';
+  // 완주 직후 "처음부터 다시"를 아주 빠르게 눌러 restartMaze()가 먼저
+  // 실행되면, 이 함수는 300ms 지연으로 뒤늦게 실행되면서 이미 새로
+  // 시작된 판 위에 지난 승리창을 덮어씌울 수 있다 — 그새 mIdx가
+  // 리셋됐다면(새 판이 시작됐다면) 조용히 무시한다.
+  if(mIdx<MISSIONS.length) return;
+  document.getElementById('mazeVictoryMsg').innerHTML='흔들리는 손으로 유도선을 따라 목적지를 모두 찾아가셨습니다!<br><br>선을 <b>'+mHits+'번</b> 벗어나셨어요.';
   document.getElementById('mazeVictory').classList.add('show');
 }
 // 미션바는 목표를 깰 때마다 innerHTML을 통째로 비우고 다시 만들면 그때마다
@@ -657,52 +759,79 @@ function drawMaze(){
   if(!mCtx) return;
   var ctx=mCtx, W=mCvs.width, H=mCvs.height;
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
-  for(var r=0;r<PR;r++) for(var c=0;c<PC;c++){
-    ctx.fillStyle = mMap[r][c]===0 ? '#ffffff' : '#eef2f7';
-    ctx.fillRect(c*mCW, r*mCH, mCW+1, mCH+1);
+  ctx.fillStyle='#334155'; ctx.fillRect(0,0,W,H); // 전체를 벽으로 채운 뒤
+  var FLOOR='#f8fafc';
+  // 복도 격자 — 전부 바닥색으로 칸을 채우고, 미로에서 실제로 연결된
+  // 이웃 쪽 틈만 바닥색으로 열어서 통로로 만든다. 방은 여기 섞이지
+  // 않는다(아래에서 곁방으로 따로 그린다) — 그래서 이 반복문에서 열리는
+  // 통로는 전부 진짜 지나다닐 수 있는 복도뿐이다.
+  for(var hr=0;hr<HG;hr++) for(var hc=0;hc<HG;hc++){
+    var tl=hCellTL(hr,hc);
+    ctx.fillStyle=FLOOR;
+    ctx.fillRect(tl.c*mCW, tl.r*mCH, CELL*mCW, CELL*mCH);
+    var adj=mazeAdj[hr][hc];
+    if(adj.E && hc<HG-1){ ctx.fillRect((tl.c+CELL)*mCW, tl.r*mCH, WALLG*mCW, CELL*mCH); }
+    if(adj.S && hr<HG-1){ ctx.fillRect(tl.c*mCW, (tl.r+CELL)*mCH, CELL*mCW, WALLG*mCH); }
   }
+  // 방(곁방) — 복도 칸 한쪽 면에 문 하나로만 붙은 막다른 칸. 문 틈은
+  // 미로 연결 여부와 무관하게 항상 열려있다(방은 늘 들어갈 수 있어야
+  // 하고, 대신 통과해서 다른 곳으로 나가는 지름길이 되지는 않는다).
   ROOMS.forEach(function(rm){
-    var x=rm.c*mCW, y=rm.r*mCH, w=rm.w*mCW, h=rm.h*mCH;
-    var isTgt = rm.mi>=0 && rm.mi===mIdx, isDone = rm.mi>=0 && rm.mi<mIdx;
+    var rr=roomRect(rm), x=rr.c*mCW, y=rr.r*mCH, w=rr.w*mCW, h=rr.h*mCH;
+    ctx.fillStyle=FLOOR;
+    ctx.fillRect(rr.doorC*mCW, rr.doorR*mCH, rr.doorW*mCW, rr.doorH*mCH);
+    var isTgt = MISSIONS[mIdx] && MISSIONS[mIdx].n===rm.name;
+    var isDone = mIdx>0 && MISSIONS.slice(0,mIdx).some(function(m){return m.n===rm.name;});
     ctx.save();
     ctx.fillStyle=rm.color; ctx.fillRect(x,y,w,h);
     ctx.strokeStyle = isTgt?'#f59e0b':isDone?'#16a34a':'#94a3b8';
     ctx.lineWidth = isTgt?3:1.3;
     ctx.strokeRect(x+1,y+1,w-2,h-2);
     ctx.fillStyle='#1e293b'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.font='bold '+Math.max(10,Math.floor(Math.min(w,h)*0.34))+'px sans-serif';
-    ctx.fillText(rm.icon, x+w/2, y+h*0.38);
-    ctx.font='bold '+Math.max(8,Math.floor(Math.min(w,h)*0.15))+'px sans-serif';
-    ctx.fillText(rm.name, x+w/2, y+h*0.74);
+    ctx.font='bold '+Math.max(9,Math.floor(Math.min(w,h)*0.34))+'px sans-serif';
+    ctx.fillText(rm.icon, x+w/2, y+h*0.4);
+    ctx.font='bold '+Math.max(7,Math.floor(Math.min(w,h)*0.16))+'px sans-serif';
+    ctx.fillText(rm.name, x+w/2, y+h*0.78);
     ctx.restore();
     if(isTgt){
-      ctx.save(); ctx.fillStyle='#dc2626'; ctx.font='bold '+Math.max(9,Math.floor(w*0.12))+'px sans-serif';
-      ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('★ 목적지',x+w/2,y+2); ctx.restore();
+      ctx.save(); ctx.fillStyle='#dc2626'; ctx.font='bold '+Math.max(8,Math.floor(Math.min(w,h)*0.14))+'px sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('★',x+w/2,y+1); ctx.restore();
     } else if(isDone){
-      ctx.save(); ctx.fillStyle='#16a34a'; ctx.font='bold '+Math.max(12,Math.floor(w*0.18))+'px sans-serif';
-      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('✓',x+w-w*0.14,y+h*0.16); ctx.restore();
+      ctx.save(); ctx.fillStyle='#16a34a'; ctx.font='bold '+Math.max(10,Math.floor(Math.min(w,h)*0.2))+'px sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('✓',x+w/2,y+1); ctx.restore();
     }
   });
-  // 입구
-  var ex=(ENT_C-1)*mCW, ey=(PR-1)*mCH, ew=mCW*3, eh=mCH;
+  // 입구 — 방과 똑같은 방식(곁방 + 문)으로 그리되, 색만 다르고 문 아이콘이 붙는다
+  var entRr=roomRect(ENT_SLOT);
   ctx.save();
-  ctx.fillStyle='rgba(217,164,65,.9)'; ctx.fillRect(ex,ey,ew,eh);
-  ctx.strokeStyle='#B0574A'; ctx.lineWidth=2; ctx.strokeRect(ex+1,ey+1,ew-2,eh-2);
-  ctx.fillStyle='#3b2a00'; ctx.font='bold '+Math.floor(Math.min(mCW,mCH)*0.55)+'px sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🚪 입구',ex+ew/2,ey+eh*0.32);
-  ctx.beginPath();
-  ctx.moveTo(ex+ew/2-mCW*0.35, ey+eh*0.9); ctx.lineTo(ex+ew/2+mCW*0.35, ey+eh*0.9); ctx.lineTo(ex+ew/2, ey+eh*0.6);
-  ctx.closePath(); ctx.fillStyle='#2563eb'; ctx.fill();
+  ctx.fillStyle=FLOOR; ctx.fillRect(entRr.doorC*mCW, entRr.doorR*mCH, entRr.doorW*mCW, entRr.doorH*mCH);
+  ctx.fillStyle='rgba(217,164,65,.9)'; ctx.fillRect(entRr.c*mCW, entRr.r*mCH, entRr.w*mCW, entRr.h*mCH);
+  ctx.strokeStyle='#B0574A'; ctx.lineWidth=2; ctx.strokeRect(entRr.c*mCW+1, entRr.r*mCH+1, entRr.w*mCW-2, entRr.h*mCH-2);
+  ctx.fillStyle='#3b2a00'; ctx.font='bold '+Math.floor(mCH*1.1)+'px sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🚪',(entRr.c+entRr.w/2)*mCW,(entRr.r+entRr.h-0.55)*mCH);
   ctx.restore();
+  // 유도선 — 항상 뚜렷하게 보이는 파란 점선으로, 지금 구간의 경로 전체를
+  // 표시한다. 손끝이 이 선에서 너무 멀어지면 실패로 처리된다.
+  if(mLegPath && mLegPath.length>1){
+    ctx.save();
+    ctx.setLineDash([mCW*0.9, mCW*0.55]);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.strokeStyle='rgba(37,99,235,.28)'; ctx.lineWidth=Math.max(6,mPathTol*2);
+    ctx.beginPath(); ctx.moveTo(mLegPath[0].x,mLegPath[0].y);
+    for(var li=1;li<mLegPath.length;li++) ctx.lineTo(mLegPath[li].x,mLegPath[li].y);
+    ctx.stroke();
+    ctx.strokeStyle='#2563eb'; ctx.lineWidth=Math.max(2.5,mCW*0.24);
+    ctx.stroke();
+    ctx.restore();
+  }
   // 그려진 경로 — 손끝(raw)이 실제로 지나온 자리를 그대로 그려서 선이
   // 또렷하게 보이게 하고, 떨림은 아래 손끝 표시로 따로 보여준다.
   if(mPts.length>1){
     ctx.save();
     ctx.beginPath(); ctx.moveTo(mPts[0].x,mPts[0].y);
     for(var i=1;i<mPts.length;i++) ctx.lineTo(mPts[i].x,mPts[i].y);
-    ctx.strokeStyle='rgba(217,164,65,.55)'; ctx.lineWidth=Math.max(8,mCW*0.8); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
-    ctx.strokeStyle='rgba(176,87,74,.95)'; ctx.lineWidth=Math.max(4,mCW*0.42); ctx.stroke();
+    ctx.strokeStyle='rgba(217,164,65,.7)'; ctx.lineWidth=Math.max(7,mCW*0.6); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+    ctx.strokeStyle='rgba(176,87,74,.95)'; ctx.lineWidth=Math.max(3.5,mCW*0.32); ctx.stroke();
     ctx.restore();
   }
   var last=mPts[mPts.length-1];
