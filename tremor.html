@@ -659,7 +659,11 @@ function mHandleMove(clientX,clientY){
   if(distToTarget<=mGoalRadius){
     if(!mPendingEvent) mPendingEvent={type:'success'};
     var last0=mPts[mPts.length-1];
-    if(raw.r!==last0.r||raw.c!==last0.c) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
+    // 그려지는 궤적(mPts)은 raw(실제 손끝) 좌표가 아니라 떨린(j) 좌표를
+    // 저장한다 — 격자 칸(r,c)이 바뀔 때만 점을 추가하는 건 그대로 raw
+    // 기준(너무 촘촘하게 찍히는 걸 막기 위함)이지만, 실제로 찍는 좌표는
+    // 그 순간의 떨림이 그대로 반영된 좌표라 선 자체가 떨리며 그려진다.
+    if(raw.r!==last0.r||raw.c!==last0.c) mPts.push({x:j.x,y:j.y,r:raw.r,c:raw.c});
     mNeedsDraw=true;
     return;
   }
@@ -673,7 +677,7 @@ function mHandleMove(clientX,clientY){
     return;
   }
   var last=mPts[mPts.length-1];
-  if(raw.r!==last.r||raw.c!==last.c) mPts.push({x:raw.x,y:raw.y,r:raw.r,c:raw.c});
+  if(raw.r!==last.r||raw.c!==last.c) mPts.push({x:j.x,y:j.y,r:raw.r,c:raw.c});
   mNeedsDraw=true;
 }
 (function(){
@@ -693,7 +697,7 @@ function mHandleMove(clientX,clientY){
       // 그어져 보인다.
       var t=e.touches[0], raw=mPtc(t.clientX,t.clientY);
       mDraw=true;
-      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC) mPts=[{x:raw.x,y:raw.y,r:raw.r,c:raw.c}];
+      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC){ var j0=mTremor(raw.x,raw.y,mLevel); mPts=[{x:j0.x,y:j0.y,r:raw.r,c:raw.c}]; }
       mNeedsDraw=true;
       e.preventDefault();
     },{passive:false});
@@ -704,7 +708,7 @@ function mHandleMove(clientX,clientY){
       if(mBombActive) return;
       var raw=mPtc(e.clientX,e.clientY);
       mDraw=true;
-      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC) mPts=[{x:raw.x,y:raw.y,r:raw.r,c:raw.c}];
+      if(raw.r>=0&&raw.r<PR&&raw.c>=0&&raw.c<PC){ var j0=mTremor(raw.x,raw.y,mLevel); mPts=[{x:j0.x,y:j0.y,r:raw.r,c:raw.c}]; }
       mNeedsDraw=true;
     });
     cvs.addEventListener('mousemove',function(e){ mHandleMove(e.clientX,e.clientY); });
@@ -871,8 +875,10 @@ function drawMaze(){
     ctx.stroke();
     ctx.restore();
   }
-  // 그려진 경로 — 손끝(raw)이 실제로 지나온 자리를 그대로 그려서 선이
-  // 또렷하게 보이게 하고, 떨림은 아래 손끝 표시로 따로 보여준다.
+  // 그려진 경로 — 손끝이 실제로 지나온 raw 좌표가 아니라 그 순간순간의
+  // 떨린(jittered) 좌표를 그대로 이어 그린다. 그래서 선 자체가 떨리며
+  // 그려진 것처럼 보인다(손끝 표시는 그 위에 현재 프레임의 떨림을
+  // 한 번 더 보여주는 역할).
   if(mPts.length>1){
     ctx.save();
     ctx.beginPath(); ctx.moveTo(mPts[0].x,mPts[0].y);
@@ -898,8 +904,9 @@ function drawMaze(){
     ctx.restore();
     return;
   }
-  // 떨리는 손끝 표시 — 실제 경로선(last)과 흔들린 위치(cur)를 가는 선으로
-  // 이어서, 손가락에 가려도 얼마나 떨리는지 눈에 띄게 보여준다.
+  // 떨리는 손끝 표시 — 방금 그려진 경로 끝(last)과 지금 이 프레임의
+  // 떨린 위치(cur)를 가는 선으로 이어서, 손가락에 가려도 지금 순간
+  // 얼마나 떨리는지 한 번 더 눈에 띄게 보여준다.
   if(mLevel>0){
     ctx.save();
     ctx.strokeStyle='rgba(220,38,38,.5)'; ctx.lineWidth=Math.max(1.5,mCW*0.12); ctx.setLineDash([3,3]);
