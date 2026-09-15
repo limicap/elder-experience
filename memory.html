@@ -78,6 +78,26 @@
   .orderTag{ background:rgba(217,164,65,0.16); border:1.5px solid var(--amber); color:var(--amber);
     border-radius:14px; padding:8px 12px; font-size:13px; font-weight:700; }
 
+  .rxList{ display:flex; flex-direction:column; gap:10px; max-width:300px; width:100%; }
+  .rxRow{ display:flex; align-items:center; gap:12px; background:var(--bg-panel-2); border:1px solid var(--line);
+    border-radius:14px; padding:12px 16px; text-align:left; }
+  .rxDot{ width:16px; height:16px; border-radius:50%; flex-shrink:0; }
+  .rxName{ font-size:14.5px; font-weight:700; flex:1; }
+  .rxTime{ font-size:12.5px; font-weight:700; color:var(--ink-dim); }
+
+  .slotRow{ display:flex; gap:8px; max-width:360px; width:100%; }
+  .slotBox{ flex:1; background:var(--bg-panel-2); border:1.5px dashed var(--line); border-radius:14px;
+    padding:10px 6px; min-height:74px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .slotBox.ready{ border-style:solid; border-color:var(--amber); }
+  .slotLabel{ font-size:12px; font-weight:700; color:var(--ink-dim); }
+  .slotPills{ display:flex; flex-wrap:wrap; gap:4px; justify-content:center; }
+  .slotPill{ width:26px; height:26px; border-radius:50%; border:1.5px solid rgba(0,0,0,0.25); cursor:pointer; }
+
+  .pillChip{ background:var(--bg-panel-2); border:1.5px solid var(--line); border-radius:20px; padding:9px 14px 9px 10px;
+    font-size:13.5px; font-weight:700; color:var(--ink); cursor:pointer; display:flex; align-items:center; gap:7px; }
+  .pillChip .rxDot{ width:13px; height:13px; }
+  .pillChip.selected{ border-color:var(--amber); background:rgba(217,164,65,0.16); color:var(--amber); }
+
   .resultScore{ font-family:'JetBrains Mono',monospace; font-size:40px; font-weight:700; color:var(--amber); }
   .resultLabel{ font-size:13px; color:var(--ink-dim); }
   .note{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:14px; padding:14px 16px;
@@ -116,6 +136,17 @@
       studyLabel:'보건소 가는 길, 순서대로 알려드릴게요',
       steps:['정문으로 들어가기','2층으로 올라가기','파란 문으로 들어가기'],
       studySeconds:5, recallType:'ordertap'
+    },
+    {
+      id:'pillbox', title:'약 정리하기',
+      studyLabel:'오늘 드실 약이에요. 언제 드시는 약인지 잘 기억해두세요',
+      meds:[
+        {id:'bp', name:'혈압약', time:'아침', color:'var(--brick)'},
+        {id:'st', name:'위장약', time:'점심', color:'var(--teal)'},
+        {id:'sl', name:'수면제', time:'저녁', color:'var(--amber)'}
+      ],
+      decoys:[{id:'vit', name:'비타민', color:'var(--ink-faint)'}],
+      studySeconds:6, recallType:'pillsort'
     }
   ];
 
@@ -135,7 +166,7 @@
     wrap.innerHTML = `
       <div class="eyebrow">MEMORY EXPERIENCE</div>
       <h2 class="title">기억력 체험</h2>
-      <p class="desc">짧게 <b style="color:var(--ink)">외우고</b> → 잠깐 <b style="color:var(--ink)">다른 일을 하고</b> → 다시 <b style="color:var(--ink)">떠올려보는</b> 3가지 상황을 체험합니다.<br>인지선별검사(MMSE·MoCA 등)에서 쓰는 "등록 → 방해과제 → 지연회상" 구조를 참고했습니다.</p>
+      <p class="desc">짧게 <b style="color:var(--ink)">외우고</b> → 잠깐 <b style="color:var(--ink)">다른 일을 하고</b> → 다시 <b style="color:var(--ink)">떠올려보는</b> ${SCENARIOS.length}가지 상황을 체험합니다.<br>인지선별검사(MMSE·MoCA 등)에서 쓰는 "등록 → 방해과제 → 지연회상" 구조를 참고했습니다.</p>
       <button class="bigbtn" id="startBtn">체험 시작하기</button>
     `;
     stage.appendChild(wrap);
@@ -174,6 +205,10 @@
       contentHTML = `<div id="numpadDisplay" class="mono">${sc.number}</div>`;
     } else if(sc.recallType==='ordertap'){
       contentHTML = `<div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;">${sc.steps.map((s,i)=>`<div class="chip" style="cursor:default;">${i+1}. ${s}</div>`).join('')}</div>`;
+    } else if(sc.recallType==='pillsort'){
+      contentHTML = `<div class="rxList">${sc.meds.map(m=>`
+        <div class="rxRow"><div class="rxDot" style="background:${m.color}"></div><div class="rxName">${m.name}</div><div class="rxTime">${m.time}</div></div>
+      `).join('')}</div>`;
     }
 
     wrap.innerHTML = `
@@ -342,6 +377,61 @@
         picked.forEach((idx,pos)=>{ if(idx===pos) correct++; });
         finishScenario(correct, sc.steps.length);
       });
+
+    } else if(sc.recallType==='pillsort'){
+      const TIMES = ['아침','점심','저녁'];
+      const pool = shuffle([...sc.meds.map(m=>({...m,decoy:false})), ...sc.decoys.map(d=>({...d,decoy:true}))]);
+      const placed = {};
+      let selectedId = null, selectedEl = null;
+      wrap.innerHTML = `
+        <div class="eyebrow">처방전 없이, 기억으로 약을 제때 넣어보세요</div>
+        <div class="slotRow">${TIMES.map(t=>`
+          <div class="slotBox" data-time="${t}"><div class="slotLabel">${t}</div><div class="slotPills" id="slot-${t}"></div></div>
+        `).join('')}</div>
+        <div class="chipGrid" id="pillPool">${pool.map(p=>`<div class="pillChip" data-id="${p.id}" data-decoy="${p.decoy}"><span class="rxDot" style="background:${p.color}"></span>${p.name}</div>`).join('')}</div>
+        <div class="desc" id="pillMsg" style="min-height:18px;">약을 먼저 고른 뒤, 시간대를 눌러 넣으세요.</div>
+        <button class="bigbtn" id="submitBtn" disabled style="opacity:.4;">회상 완료</button>
+      `;
+      stage.appendChild(wrap);
+      const msgEl = wrap.querySelector('#pillMsg');
+      const submitBtn = wrap.querySelector('#submitBtn');
+      function clearSelection(){
+        if(selectedEl) selectedEl.classList.remove('selected');
+        selectedId = null; selectedEl = null;
+      }
+      wrap.querySelectorAll('#pillPool .pillChip').forEach(chip=>{
+        chip.addEventListener('click', ()=>{
+          const isDecoy = chip.dataset.decoy==='true';
+          if(isDecoy){ msgEl.textContent = '⚠️ 처방전에 없던 약이에요. 넣지 마세요.'; return; }
+          if(selectedId===chip.dataset.id){ clearSelection(); msgEl.textContent = '약을 먼저 고른 뒤, 시간대를 눌러 넣으세요.'; return; }
+          clearSelection();
+          selectedId = chip.dataset.id; selectedEl = chip;
+          chip.classList.add('selected');
+          const m = sc.meds.find(x=>x.id===selectedId);
+          msgEl.textContent = `✅ ${m.name} 선택됨 — 시간대를 눌러 넣으세요.`;
+        });
+      });
+      wrap.querySelectorAll('.slotBox').forEach(box=>{
+        box.addEventListener('click', ()=>{
+          if(!selectedId) return;
+          const m = sc.meds.find(x=>x.id===selectedId);
+          const time = box.dataset.time;
+          placed[selectedId] = time;
+          const dot = document.createElement('div');
+          dot.className = 'slotPill'; dot.style.background = m.color; dot.title = m.name;
+          box.querySelector('.slotPills').appendChild(dot);
+          selectedEl.remove();
+          clearSelection();
+          msgEl.textContent = `${m.name}을(를) ${time}에 넣었습니다.`;
+          const realLeft = wrap.querySelectorAll('#pillPool .pillChip[data-decoy="false"]').length;
+          if(realLeft===0){ submitBtn.disabled=false; submitBtn.style.opacity=1; }
+        });
+      });
+      submitBtn.addEventListener('click', ()=>{
+        let correct = 0;
+        sc.meds.forEach(m=>{ if(placed[m.id]===m.time) correct++; });
+        finishScenario(correct, sc.meds.length);
+      });
     }
   }
 
@@ -373,7 +463,7 @@
     wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='16px';
     wrap.innerHTML = `
       <div class="eyebrow">체험 종료</div>
-      <h2 class="title">3가지 상황을 모두 마쳤습니다</h2>
+      <h2 class="title">${SCENARIOS.length}가지 상황을 모두 마쳤습니다</h2>
       <div class="resultScore">${pct}%</div>
       <div class="resultLabel">전체 회상 정확도 (${totalCorrect} / ${totalMax})</div>
       <div class="note">
