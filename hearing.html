@@ -50,6 +50,7 @@
   .lvbtn.lv1{ border-color:#5E9E6E; color:#5E9E6E; opacity:1; background:rgba(94,158,110,.1); }
   .lvbtn.lv2{ border-color:var(--amber); color:var(--amber); opacity:1; background:rgba(217,164,65,.1); }
   .lvbtn.lv3{ border-color:var(--brick); color:var(--brick); opacity:1; background:rgba(176,87,74,.12); }
+  .lvbtn.locked{ opacity:.5; cursor:not-allowed; }
 
   .pcard{ border-radius:16px; padding:18px; border:1.5px solid var(--line); background:var(--bg-panel); margin-bottom:14px; }
   .pcard.lv1{ border-color:#5E9E6E; }
@@ -106,6 +107,7 @@
   .res-em{ font-size:32px; margin-bottom:8px; }
   .res-sc{ font-size:21px; font-weight:900; color:var(--amber); margin-bottom:6px; font-family:'JetBrains Mono',monospace; }
   .res-msg{ color:var(--ink-dim); font-size:12.5px; margin-bottom:16px; }
+  .res-unlock{ background:rgba(217,164,65,.12); border:1px solid rgba(217,164,65,.35); color:var(--amber); border-radius:10px; padding:9px 12px; font-size:12px; font-weight:700; margin-bottom:14px; }
   .res-retry{ background:var(--bg-panel-2); border:1px solid var(--line); color:var(--ink-dim); border-radius:22px; padding:10px 20px; font-size:13px; font-weight:700; width:100%; }
 
   .tips{ margin:30px 16px 0; background:rgba(122,148,113,.08); border:1.5px solid rgba(122,148,113,.3); border-radius:18px; padding:18px 16px; }
@@ -194,9 +196,12 @@ var SUFFS  = ['n','m','s'];
 
 var curAudio = {sw:null, ho:null};
 var curCi   = {sw:0, ho:0};
-var curLv   = {sw:1, ho:1};
+var curLv   = {sw:2, ho:2};
 var vizTmr  = {sw:null, ho:null};
 var QS      = {}; // 콘텐츠별(key) 퀴즈 진행 상태 — 방금 들은 안내에 해당하는 것만 채워짐
+// 정상 청력은 경증·중증을 먼저 듣고 퀴즈를 풀어 정답을 맞혀봐야("이게 맞았구나") 열리는
+// 잠금 상태로 시작한다 — 처음부터 정상을 들으면 경증/중증 체험 자체가 무의미해지기 때문.
+var lv1Unlocked = {};
 
 function buildPanel(sit){
   var items = CONTENT[sit];
@@ -212,17 +217,24 @@ function buildPanel(sit){
       +'<div class="qbox" id="qbox-'+sit+'-'+i+'" style="display:none"><h3>&#9999;&#65039; 퀴즈</h3><div class="qsub">방금 들으신 내용으로 답해 보세요.</div><div id="qb-'+sit+'-'+i+'"></div></div>'
       +'</div>';
   }).join('');
-  renderCP(sit, 0, 1);
+  renderCP(sit, 0, 2);
 }
 
 function renderCP(sit, ci, lv){
   var el = document.getElementById('pc-'+sit+'-'+ci);
   if(!el) return;
   var c = CONTENT[sit][ci], cfg = LV[lv];
+  var unlocked = !!lv1Unlocked[c.key];
 
   var lvBtns = [['✅','정상 청력','원본 음성'],['👂','경증 난청','자음 손실'],['🌀','중증 난청','심한 손실']]
     .map(function(nm,i){
       var idx=i+1;
+      if(idx===1 && !unlocked){
+        return '<button class="lvbtn locked" disabled title="경증·중증을 먼저 듣고 퀴즈를 풀면 열려요">'
+          +'<span class="lvico">🔒</span>'
+          +'<span class="lvnm">정상 청력</span>'
+          +'<span class="lvsb">퀴즈 완료 후</span></button>';
+      }
       return '<button class="lvbtn'+(lv===idx?' lv'+idx:'')+'" onclick="setLv(\''+sit+'\','+ci+','+idx+')">'
         +'<span class="lvico">'+nm[0]+'</span>'
         +'<span class="lvnm">'+nm[1]+'</span>'
@@ -253,7 +265,10 @@ function renderCP(sit, ci, lv){
     +'</div>';
 }
 
-function setLv(sit,ci,lv){ stopAudio(sit); curLv[sit]=lv; renderCP(sit,ci,lv); }
+function setLv(sit,ci,lv){
+  if(lv===1 && !lv1Unlocked[CONTENT[sit][ci].key]) return;
+  stopAudio(sit); curLv[sit]=lv; renderCP(sit,ci,lv);
+}
 
 function playAudio(sit,ci,lv,btn){
   if(curAudio[sit]){ stopAudio(sit); return; }
@@ -284,7 +299,7 @@ function playAudio(sit,ci,lv,btn){
     audio.removeEventListener('ended',onEnded);
     stopAudio(sit);
     btn.textContent='▶ 다시 듣기';
-    openQuiz(sit,ci);
+    if(lv!==1) openQuiz(sit,ci); // 정상 청력은 퀴즈 정답 확인용이므로 다시 퀴즈를 띄우지 않는다
   }
   audio.addEventListener('ended',onEnded);
 
@@ -324,6 +339,7 @@ function selC(sit,ci){
     var cp=document.getElementById('cp-'+sit+'-'+i);
     if(cp) cp.className='cp'+(i===ci?' on':'');
   });
+  if(curLv[sit]===1 && !lv1Unlocked[CONTENT[sit][ci].key]) curLv[sit]=2;
   renderCP(sit,ci,curLv[sit]);
 }
 
@@ -429,10 +445,14 @@ function showRes(sit,ci,el){
   var msg=pct>=100?'훌륭합니다! 방금 들으신 내용을 정확히 기억하셨어요.':
           pct>=50?'잘 하셨어요! 절반은 맞히셨습니다.':
                   '다시 들으며 노인의 어려움을 느껴보세요.';
+  var wasLocked = !lv1Unlocked[key];
+  lv1Unlocked[key] = true;
   el.innerHTML='<div class="res"><div class="res-em">'+em+'</div>'
     +'<div class="res-sc">'+s.s+' / '+tot+'점</div>'
     +'<div class="res-msg">'+msg+'</div>'
+    +'<div class="res-unlock">🔓 이제 위에서 정상 청력으로 들으며 정답을 확인해보세요.</div>'
     +'<button class="res-retry" onclick="retryQ(\''+sit+'\','+ci+')">🔄 다시 풀기</button></div>';
+  if(wasLocked) renderCP(sit,ci,curLv[sit]);
 }
 function retryQ(sit,ci){ var key=CONTENT[sit][ci].key; QS[key]={i:0,s:0}; renderQ(sit,ci); }
 
