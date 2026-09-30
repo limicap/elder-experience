@@ -27,6 +27,7 @@
   #videoSim{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   #videoGhost{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; mix-blend-mode:screen; }
   #cbCanvas{ position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
+  #loupeCanvas{ position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
 
   .overlay{ position:absolute; inset:0; pointer-events:none; }
   #ovVignette{ background:transparent; opacity:0; transition:opacity .25s; }
@@ -84,6 +85,13 @@
     width:34px; height:34px; border-radius:50%; background:rgba(20,24,28,.55); border:1px solid rgba(238,234,226,.18);
     display:flex; align-items:center; justify-content:center; color:var(--ink); font-size:16px; text-decoration:none;
   }
+  #loupeToggle{
+    position:absolute; z-index:11; bottom:60px; right:14px; display:none;
+    align-items:center; gap:6px; background:rgba(20,24,28,.72); border:1px solid rgba(238,234,226,.25);
+    color:var(--ink); font-family:'Noto Sans KR',sans-serif; font-weight:700; font-size:12.5px;
+    padding:9px 14px; border-radius:20px;
+  }
+  #loupeToggle.on{ background:rgba(217,164,65,.92); color:#1B1300; border-color:var(--amber); }
 
   #permOverlay{
     position:absolute; inset:0; z-index:20; background:var(--bg-deep);
@@ -208,6 +216,7 @@
     <div id="simWrap">
       <video id="videoSim" autoplay playsinline muted></video>
       <canvas id="cbCanvas"></canvas>
+      <canvas id="loupeCanvas"></canvas>
       <video id="videoGhost" autoplay playsinline muted></video>
       <div class="overlay" id="ovHaze"></div>
       <div class="overlay" id="ovGlare"></div>
@@ -222,6 +231,7 @@
     <a id="homeBtn" href="index.html">&#8592;</a>
     <div class="side-tag" id="tagLeft">1 &middot; 정상 시야</div>
     <div class="side-tag" id="tagRight">2 &middot; 체험 중</div>
+    <button id="loupeToggle">&#128269; 돋보기로 보기</button>
 
     <div id="divider">
       <div class="line"></div>
@@ -297,8 +307,10 @@
     { id:'cataract', name:'백내장', acuity:'20/200', group:'aging',
       desc:'수정체가 뿌옇게 흐려져 안개가 낀 것처럼 보이고, 밝은 빛은 번지듯 퍼져 보입니다. 전체적으로 색이 누렇게 바래 보이기도 해요.',
       tips:['조명을 밝게 하되 창가 역광·직사광은 피해주세요','글씨는 크고 굵게, 대비가 뚜렷한 자료를 준비하세요','서류 서명란은 손으로 짚어 안내해주세요'],
-      apply(t){ const e=Math.pow(t,1.7);
-        return { filter:`blur(${1+6*e}px) contrast(${100-55*e}%) saturate(${100-40*e}%) sepia(${12+28*e}%) brightness(${100+3*t}%)`, haze:e }; } },
+      apply(t){ const e=Math.pow(t,1.5);
+        // 말기에도 아무것도 안 보일 정도로 뭉개지지 않도록 블러·안개는 완만하게 올리고,
+        // 대신 백내장 특유의 누런 색조(sepia)와 밝은 빛이 번지는 느낌(glare)을 강조한다.
+        return { filter:`blur(${1+4.5*e}px) contrast(${100-38*e}%) saturate(${100-35*e}%) sepia(${18+45*e}%) brightness(${100+4*t}%)`, haze:e*0.55, glare:t*0.45 }; } },
     { id:'glaucoma', name:'녹내장', acuity:'비대칭 시야결손', group:'aging',
       desc:'중심 시력은 말기까지 뚜렷하게 잘 유지되지만, 코 쪽이나 위아래 시야부터 불규칙하게 지워지듯 사라집니다. 눈부심은 심하지 않고 서서히 흐릿해지는 느낌이며, 반대쪽 눈이 보완해줘서 스스로는 한참 눈치채지 못하는 경우가 많아요.',
       tips:['옆·뒤에서 갑자기 말을 걸거나 손대지 마세요','정면으로 천천히 다가가 인기척을 먼저 알려주세요','이동 중 발밑 턱이나 장애물을 말로 알려주세요'],
@@ -372,12 +384,17 @@
   let severity = 55;
   let presbyopiaZoom = 0.3; // 0=멀리(선명) ~ 1=가까이(블러)
   let amdFocus = {x:0.5, y:0.5}; // 2번: 황반변성 암점 위치(손가락으로 이동 가능)
+  let presbyopiaLoupeOn = false; // 노안 - 돋보기 모드 켬/끔
+  let loupePos = {x:0.5, y:0.5}; // 돋보기(선명하게 보이는 원) 위치
 
   const videoNormal = document.getElementById('videoNormal');
   const videoSim = document.getElementById('videoSim');
   const videoGhost = document.getElementById('videoGhost');
   const cbCanvas = document.getElementById('cbCanvas');
   const cbCtx = cbCanvas.getContext('2d', { willReadFrequently:true });
+  const loupeCanvas = document.getElementById('loupeCanvas');
+  const loupeCtx = loupeCanvas.getContext('2d');
+  const loupeToggle = document.getElementById('loupeToggle');
   const ovHaze = document.getElementById('ovHaze');
   const ovGlare = document.getElementById('ovGlare');
   const ovVignette = document.getElementById('ovVignette');
@@ -460,8 +477,78 @@
   function stopColorblindCanvas(){
     cbRunning = false;
     cbLoopId++;
-    videoSim.style.opacity = '1';
     cbCanvas.style.display = 'none';
+    // render()는 조건이 바뀔 때마다 매번 호출되는데, 색각장애가 아닐 땐 항상
+    // 이 함수가 실행된다 - 노안 돋보기 캔버스가 videoSim을 숨기고 있는
+    // 도중이라면 그 상태를 덮어쓰지 않는다.
+    if(!loupeRunning) videoSim.style.opacity = '1';
+  }
+
+  // 1번-보조: 노안 돋보기 모드 - 화면 전체는 흐리게(초점 안 맞는 느낌) 그린 뒤,
+  // 손가락으로 누른 자리만 원형으로 오려내 그 부분만 선명한 영상을 겹쳐 그린다
+  // (돋보기를 대고 보는 느낌). 픽셀 단위 조작이 없어 캔버스 해상도를 낮출
+  // 필요가 없는 대신, 매 프레임 filter(blur)를 쓰므로 색각장애 캔버스보다
+  // 해상도를 스테이지 크기에 맞춰 선명하게 쓴다.
+  let loupeRunning = false;
+  let loupeLoopId = 0;
+  function loupeDrawFrame(id){
+    if(!loupeRunning || id !== loupeLoopId) return;
+    const srcVideo = videoNormal;
+    if(srcVideo.videoWidth > 0){
+      const rect = document.getElementById('stage').getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio||1);
+      const targetW = Math.round(rect.width*dpr), targetH = Math.round(rect.height*dpr);
+      if(loupeCanvas.width !== targetW || loupeCanvas.height !== targetH){
+        loupeCanvas.width = targetW; loupeCanvas.height = targetH;
+      }
+      const vw = srcVideo.videoWidth, vh = srcVideo.videoHeight;
+      const scale = Math.max(targetW/vw, targetH/vh);
+      const sw = targetW/scale, sh = targetH/scale;
+      const sx = (vw-sw)/2, sy = (vh-sh)/2;
+      const t = severity/100;
+      const blurPx = Math.max(0.3, (1+5*t)*presbyopiaZoom) * dpr;
+
+      loupeCtx.save();
+      loupeCtx.filter = `blur(${blurPx}px)`;
+      loupeCtx.drawImage(srcVideo, sx, sy, sw, sh, 0, 0, targetW, targetH);
+      loupeCtx.restore();
+
+      const cx = loupePos.x*targetW, cy = loupePos.y*targetH;
+      const radius = Math.min(targetW, targetH)*0.19;
+      loupeCtx.save();
+      loupeCtx.beginPath();
+      loupeCtx.arc(cx, cy, radius, 0, Math.PI*2);
+      loupeCtx.clip();
+      loupeCtx.filter = 'none';
+      loupeCtx.drawImage(srcVideo, sx, sy, sw, sh, 0, 0, targetW, targetH);
+      loupeCtx.restore();
+
+      loupeCtx.save();
+      loupeCtx.beginPath();
+      loupeCtx.arc(cx, cy, radius, 0, Math.PI*2);
+      loupeCtx.lineWidth = 3*dpr;
+      loupeCtx.strokeStyle = 'rgba(255,255,255,.9)';
+      loupeCtx.shadowColor = 'rgba(0,0,0,.35)';
+      loupeCtx.shadowBlur = 6*dpr;
+      loupeCtx.stroke();
+      loupeCtx.restore();
+    }
+    requestAnimationFrame(()=> loupeDrawFrame(id));
+  }
+  function startLoupeCanvas(){
+    videoSim.style.opacity = '0';
+    loupeCanvas.style.display = 'block';
+    if(!loupeRunning){
+      loupeRunning = true;
+      loupeLoopId++;
+      loupeDrawFrame(loupeLoopId);
+    }
+  }
+  function stopLoupeCanvas(){
+    loupeRunning = false;
+    loupeLoopId++;
+    loupeCanvas.style.display = 'none';
+    if(!cbRunning) videoSim.style.opacity = '1';
   }
 
   // 실/지렁이 모양(투명, 구불구불) + 날파리 모양(작고 동그란) 부유물
@@ -551,6 +638,7 @@
       currentCond = c;
       if(c.sub) currentSub = c.sub[0]; // 이전 조건에서 쓰던 세부 옵션이 남아있지 않도록 첫 옵션으로 초기화
       amdFocus = {x:0.5, y:0.5};
+      presbyopiaLoupeOn = false; stopLoupeCanvas(); loupeToggle.classList.remove('on');
       if(c.id==='accommodative') startFocusLagCycle(); else stopFocusLagCycle();
       [...chipsEl.children, ...chips2El.children].forEach(ch=>ch.classList.remove('active'));
       chip.classList.add('active');
@@ -630,6 +718,9 @@
     videoSim.style.filter = res.filter || 'none';
     videoSim.style.transformOrigin = 'center center';
     videoSim.style.transform = currentCond.id==='presbyopia' ? `scale(${1+presbyopiaZoom*0.35})` : 'none';
+
+    // 1번-보조: 노안 돋보기 토글 버튼은 노안 항목에서만 보인다
+    loupeToggle.style.display = currentCond.id==='presbyopia' ? 'flex' : 'none';
 
     // vignette / tunnel
     const vig = res.vignette||0;
@@ -734,7 +825,9 @@
     // 조건별 조작법 안내 (개조식으로 간결하게)
     if(currentCond.id==='presbyopia'){
       const state = presbyopiaZoom<0.35 ? '현재: 선명' : presbyopiaZoom>0.65 ? '현재: 흐림' : '현재: 보통';
-      hintEl.textContent = `🤏 확대=가까이(흐림) · 축소=멀리(선명) · ${state}`;
+      hintEl.textContent = presbyopiaLoupeOn
+        ? `🔍 화면을 눌러 돋보기 위치 이동 · 🤏 핀치로 흐림 정도 조절 · ${state}`
+        : `🤏 확대=가까이(흐림) · 축소=멀리(선명) · ${state}`;
     } else if(currentCond.id==='amd'){
       hintEl.textContent = '👆 화면 터치 · 암점 위치 이동';
     } else if(currentCond.id==='accommodative'){
@@ -758,6 +851,14 @@
     const open = tipsBody.classList.toggle('open');
     tipsToggle.classList.toggle('open', open);
     panelState = open ? 'up' : 'mid';
+  });
+
+  loupeToggle.addEventListener('click', ()=>{
+    if(currentCond.id!=='presbyopia') return;
+    presbyopiaLoupeOn = !presbyopiaLoupeOn;
+    loupeToggle.classList.toggle('on', presbyopiaLoupeOn);
+    if(presbyopiaLoupeOn) startLoupeCanvas(); else stopLoupeCanvas();
+    render();
   });
 
   // 2번: 손끝으로 드래그하면 위(팁 열림)·중간(기본)·아래(컴팩트, 카메라 확대) 3단계로 이동
@@ -849,6 +950,33 @@
     function move(e){ if(dragging && currentCond.id==='amd') setFocus(e); }
     function end(){ dragging = false; }
     const st = stageElAmd();
+    st.addEventListener('pointerdown', start);
+    st.addEventListener('pointermove', e=>{ if(e.buttons) move(e); });
+    st.addEventListener('pointerup', end);
+    st.addEventListener('pointercancel', end);
+  })();
+
+  // 1번-보조: 노안 돋보기 모드 - 손가락으로 누르고 있는 자리를 돋보기 위치로 옮긴다
+  (function(){
+    let dragging = false;
+    function stageElLoupe(){ return document.getElementById('stage'); }
+    function toFrac(e){
+      const r = stageElLoupe().getBoundingClientRect();
+      return { x:(e.clientX-r.left)/r.width, y:(e.clientY-r.top)/r.height };
+    }
+    function setLoupe(e){
+      const f = toFrac(e);
+      loupePos.x = Math.max(0.08, Math.min(0.92, f.x));
+      loupePos.y = Math.max(0.08, Math.min(0.92, f.y));
+    }
+    function start(e){
+      if(currentCond.id!=='presbyopia' || !presbyopiaLoupeOn) return;
+      if(e.target.closest && (e.target.closest('#divider') || e.target.closest('#loupeToggle'))) return;
+      dragging = true; setLoupe(e);
+    }
+    function move(e){ if(dragging && currentCond.id==='presbyopia' && presbyopiaLoupeOn) setLoupe(e); }
+    function end(){ dragging = false; }
+    const st = stageElLoupe();
     st.addEventListener('pointerdown', start);
     st.addEventListener('pointermove', e=>{ if(e.buttons) move(e); });
     st.addEventListener('pointerup', end);
