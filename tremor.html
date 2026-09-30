@@ -389,7 +389,7 @@ function makeTremor(ampArr,dirX,dirY){
 // 들어가는 입구)이다.
 var ROOMS=[
   {name:'접수창구',   icon:'📋', rect:[1,1,26,19],   door:[29.5,10]},
-  {name:'화장실',     icon:'🚻', rect:[38,1,15,19],  door:[45,22.5]},
+  {name:'화장실',     icon:'🚻', rect:[38,1,15,19],  door:[35,10]},
   {name:'채혈실',     icon:'🩸', rect:[58,1,13,19],  door:[73.5,10]},
   {name:'진료실',     icon:'🩺', rect:[76,1,23,23],  door:[73.5,13]},
   {name:'방사선과',   icon:'🩻', rect:[58,23,13,19], door:[65,44.5]},
@@ -403,7 +403,7 @@ var ROOMS=[
 // 사진에는 실제 벽이 있지만(텍스트 라벨은 없는 휴게실 같은 공간) 목적지로
 // 쓰지는 않는 방 — 유도선이 통과할 수 없다는 것만 알면 되므로 벽
 // 판정에만 포함시킨다.
-var BLOCK_ONLY_RECTS=[ [2,23,20,19] ];
+var BLOCK_ONLY_RECTS=[ [2,23,20,19], [37,19,18,15] ];
 function roomByName(name){ return ROOMS.filter(function(r){return r.name===name;})[0]; }
 function roomCenterPct(rm){ return [rm.rect[0]+rm.rect[2]/2, rm.rect[1]+rm.rect[3]/2]; }
 
