@@ -388,33 +388,39 @@ function makeTremor(ampArr,dirX,dirY){
 // 판정용 사각형, door는 그 방이 복도와 만나는 지점(유도선이 실제로
 // 들어가는 입구)이다.
 var ROOMS=[
-  {name:'접수창구',   icon:'📋', rect:[1,1,26,19],   door:[27,10]},
-  {name:'화장실',     icon:'🚻', rect:[38,1,15,19],  door:[45,21]},
-  {name:'채혈실',     icon:'🩸', rect:[58,1,15,19],  door:[65,21]},
-  {name:'진료실',     icon:'🩺', rect:[76,1,23,23],  door:[75,13]},
-  {name:'방사선과',   icon:'🩻', rect:[58,23,18,19], door:[65,43]},
-  {name:'내과',       icon:'💊', rect:[79,23,20,19], door:[78,32]},
-  {name:'주사실',     icon:'💉', rect:[1,45,26,19],  door:[28,55]},
-  {name:'엘리베이터', icon:'🛗', rect:[79,45,20,19], door:[78,55]},
-  {name:'안과',       icon:'👁',  rect:[1,67,26,21],  door:[27,75]},
-  {name:'정형외과',   icon:'🦴', rect:[38,67,20,21], door:[48,66]},
-  {name:'약국',       icon:'💊', rect:[70,67,29,21], door:[69,75]}
+  {name:'접수창구',   icon:'📋', rect:[1,1,26,19],   door:[29.5,10]},
+  {name:'화장실',     icon:'🚻', rect:[38,1,15,19],  door:[35,10]},
+  {name:'채혈실',     icon:'🩸', rect:[58,1,13,19],  door:[73.5,10]},
+  {name:'진료실',     icon:'🩺', rect:[76,1,23,23],  door:[73.5,13]},
+  {name:'방사선과',   icon:'🩻', rect:[58,23,13,19], door:[65,44.5]},
+  {name:'내과',       icon:'💊', rect:[79,23,20,19], door:[76.5,32]},
+  {name:'주사실',     icon:'💉', rect:[1,45,26,19],  door:[29.5,55]},
+  {name:'엘리베이터', icon:'🛗', rect:[79,45,20,19], door:[76.5,55]},
+  {name:'안과',       icon:'👁',  rect:[1,67,26,21],  door:[29.5,75]},
+  {name:'정형외과',   icon:'🦴', rect:[38,67,20,21], door:[48,64.5]},
+  {name:'약국',       icon:'💊', rect:[70,67,29,21], door:[67.5,75]}
 ];
 // 사진에는 실제 벽이 있지만(텍스트 라벨은 없는 휴게실 같은 공간) 목적지로
 // 쓰지는 않는 방 — 유도선이 통과할 수 없다는 것만 알면 되므로 벽
 // 판정에만 포함시킨다.
-var BLOCK_ONLY_RECTS=[ [2,23,20,19] ];
+var BLOCK_ONLY_RECTS=[ [2,23,20,19], [37,19,18,15] ];
 function roomByName(name){ return ROOMS.filter(function(r){return r.name===name;})[0]; }
 function roomCenterPct(rm){ return [rm.rect[0]+rm.rect[2]/2, rm.rect[1]+rm.rect[3]/2]; }
 
 // 0~100% 좌표를 잘게 나눈 격자에서, 방이 차지하는 칸을 모두 "벽"으로
 // 표시한다 — 이 격자는 방 배치가 고정이라 한 번만 만들면 된다.
 var WALK_N=200;
+// 방 벽에서 WALL_MARGIN(%)만큼 여유를 두고 막는다 — 안 그러면 최단 경로가
+// 벽 바로 그 경계선을 타고 지나갈 수 있는데, 실제로 그려지는 유도선은
+// 두께가 있어서(특히 허용치가 넓은 "정상" 단계) 수학적으로는 벽을 안
+// 넘었어도 화면에는 선이 방 안쪽까지 삐져나와 보인다. 여유를 둬서
+// 애초에 벽에 바짝 붙는 경로 자체가 나오지 않게 한다.
+var WALL_MARGIN=1.5;
 var walkGrid=(function(){
   var g=[]; for(var y=0;y<WALK_N;y++) g.push(new Uint8Array(WALK_N));
   ROOMS.map(function(r){return r.rect;}).concat(BLOCK_ONLY_RECTS).forEach(function(rect){
-    var x0=Math.floor(rect[0]/100*WALK_N), y0=Math.floor(rect[1]/100*WALK_N);
-    var x1=Math.ceil((rect[0]+rect[2])/100*WALK_N), y1=Math.ceil((rect[1]+rect[3])/100*WALK_N);
+    var x0=Math.floor((rect[0]-WALL_MARGIN)/100*WALK_N), y0=Math.floor((rect[1]-WALL_MARGIN)/100*WALK_N);
+    var x1=Math.ceil((rect[0]+rect[2]+WALL_MARGIN)/100*WALK_N), y1=Math.ceil((rect[1]+rect[3]+WALL_MARGIN)/100*WALK_N);
     for(var y=Math.max(0,y0);y<Math.min(WALK_N,y1);y++)
       for(var x=Math.max(0,x0);x<Math.min(WALK_N,x1);x++) g[y][x]=1;
   });
@@ -464,16 +470,35 @@ function walkBFS(fromCell,toCell_){
 }
 // 직선으로 이어지는 구간은 꺾이는 지점만 남기고 중간 칸들을 솎아내서,
 // 유도선이 불필요하게 촘촘한 점으로 그려지지 않게 한다.
+// 두 칸 사이를 일직선으로 이었을 때 벽 칸을 하나도 지나지 않는지 확인한다
+// (직선 위의 칸들을 촘촘히 샘플링해서 검사).
+function hasLineOfSight(a,b){
+  var steps=Math.max(Math.abs(b[0]-a[0]),Math.abs(b[1]-a[1]));
+  if(steps===0) return true;
+  for(var i=0;i<=steps;i++){
+    var t=i/steps;
+    var x=Math.round(a[0]+(b[0]-a[0])*t), y=Math.round(a[1]+(b[1]-a[1])*t);
+    if(walkGrid[y][x]) return false;
+  }
+  return true;
+}
+// 꺾이는 지점만 남기고 직선 구간의 중간 칸들을 솎아낸다 — 단, 방향 부호만
+// 보고 대충 합치면(이전 방식) 완만하게 휘어 벽을 피해가던 계단식 경로가
+// "눈에 보이기엔 비슷한 방향"이라는 이유로 통째로 하나의 직선으로
+// 뭉개지면서 그 직선이 오히려 벽을 가로질러버리는 문제가 있었다. 대신
+// 매번 "지금 남겨둔 점에서 얼마나 멀리까지 벽 없이 바로 보이는지"를
+// 실제로 격자에 대고 확인해서, 시야가 막히지 않는 한도까지만 점을
+// 건너뛴다 — 합쳐진 직선이 벽을 가로지르는 일이 구조적으로 없다.
 function simplifyCellPath(path){
   if(path.length<3) return path;
   var out=[path[0]];
-  var sign=function(v){ return [v[0]?(v[0]>0?1:-1):0, v[1]?(v[1]>0?1:-1):0]; };
-  for(var i=1;i<path.length-1;i++){
-    var d1=sign([path[i][0]-out[out.length-1][0], path[i][1]-out[out.length-1][1]]);
-    var d2=sign([path[i+1][0]-path[i][0], path[i+1][1]-path[i][1]]);
-    if(d1[0]!==d2[0]||d1[1]!==d2[1]) out.push(path[i]);
+  var i=0;
+  while(i<path.length-1){
+    var j=path.length-1;
+    while(j>i+1 && !hasLineOfSight(out[out.length-1],path[j])) j--;
+    out.push(path[j]);
+    i=j;
   }
-  out.push(path[path.length-1]);
   return out;
 }
 var ENT_START=[50,97]; // 화면 맨 아래(안내도 밖 '문')에서 시작
