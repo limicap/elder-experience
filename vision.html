@@ -91,6 +91,10 @@
     color:var(--ink); font-family:'Noto Sans KR',sans-serif; font-weight:700; font-size:12.5px;
     padding:9px 14px; border-radius:20px;
   }
+  /* 노안 돋보기 모드: 좌우 비교 없이 화면 전체를 흐리게 보여주고 원 안만 선명하게 */
+  #stage.loupe-mode #simWrap{ clip-path:none !important; }
+  #stage.loupe-mode #divider,
+  #stage.loupe-mode .side-tag{ display:none; }
   #loupeToggle.on{ background:rgba(217,164,65,.92); color:#1B1300; border-color:var(--amber); }
 
   #permOverlay{
@@ -478,19 +482,22 @@
     cbRunning = false;
     cbLoopId++;
     cbCanvas.style.display = 'none';
-    // render()는 조건이 바뀔 때마다 매번 호출되는데, 색각장애가 아닐 땐 항상
-    // 이 함수가 실행된다 - 노안 돋보기 캔버스가 videoSim을 숨기고 있는
-    // 도중이라면 그 상태를 덮어쓰지 않는다.
-    if(!loupeRunning) videoSim.style.opacity = '1';
+    videoSim.style.opacity = '1';
   }
 
-  // 1번-보조: 노안 돋보기 모드 - 화면 전체는 흐리게(초점 안 맞는 느낌) 그린 뒤,
-  // 손가락으로 누른 자리만 원형으로 오려내 그 부분만 선명한 영상을 겹쳐 그린다
-  // (돋보기를 대고 보는 느낌). 픽셀 단위 조작이 없어 캔버스 해상도를 낮출
-  // 필요가 없는 대신, 매 프레임 filter(blur)를 쓰므로 색각장애 캔버스보다
-  // 해상도를 스테이지 크기에 맞춰 선명하게 쓴다.
+  // 1번-보조: 노안 돋보기 모드 - 배경(화면 전체)은 videoSim에 CSS filter blur를 걸어
+  // 초점이 안 맞게 보여주고, 이 캔버스에는 손가락으로 누른 자리의 원 안쪽만
+  // 선명한 영상을 (돋보기처럼 살짝 확대해서) 그린다. 원 바깥은 투명하게 비워 둔다.
+  // iOS Safari는 캔버스 ctx.filter(blur)를 지원하지 않아 캔버스에서 흐림을 만들면
+  // 아이폰에서는 화면 전체가 선명하게 보이므로, 흐림은 반드시 CSS filter로 처리한다.
+  const LOUPE_MAG = 1.6; // 돋보기 확대 배율
   let loupeRunning = false;
   let loupeLoopId = 0;
+  function loupeBlurPx(){
+    // 핀치로 '멀리(선명)'까지 줄여도 돋보기 체험 중에는 배경이 확실히 흐려 보이도록 최소값을 둔다
+    const t = severity/100;
+    return Math.max(3+5*t, (1+5*t)*presbyopiaZoom*1.6);
+  }
   function loupeDrawFrame(id){
     if(!loupeRunning || id !== loupeLoopId) return;
     const srcVideo = videoNormal;
@@ -505,38 +512,35 @@
       const scale = Math.max(targetW/vw, targetH/vh);
       const sw = targetW/scale, sh = targetH/scale;
       const sx = (vw-sw)/2, sy = (vh-sh)/2;
-      const t = severity/100;
-      const blurPx = Math.max(0.3, (1+5*t)*presbyopiaZoom) * dpr;
-
-      loupeCtx.save();
-      loupeCtx.filter = `blur(${blurPx}px)`;
-      loupeCtx.drawImage(srcVideo, sx, sy, sw, sh, 0, 0, targetW, targetH);
-      loupeCtx.restore();
-
       const cx = loupePos.x*targetW, cy = loupePos.y*targetH;
-      const radius = Math.min(targetW, targetH)*0.19;
+      const radius = Math.min(targetW, targetH)*0.2;
+
+      loupeCtx.clearRect(0, 0, targetW, targetH);
       loupeCtx.save();
       loupeCtx.beginPath();
       loupeCtx.arc(cx, cy, radius, 0, Math.PI*2);
       loupeCtx.clip();
-      loupeCtx.filter = 'none';
+      // 돋보기 중심은 그대로 두고 주변을 LOUPE_MAG배로 키워서 그린다
+      loupeCtx.translate(cx, cy);
+      loupeCtx.scale(LOUPE_MAG, LOUPE_MAG);
+      loupeCtx.translate(-cx, -cy);
       loupeCtx.drawImage(srcVideo, sx, sy, sw, sh, 0, 0, targetW, targetH);
       loupeCtx.restore();
 
       loupeCtx.save();
       loupeCtx.beginPath();
       loupeCtx.arc(cx, cy, radius, 0, Math.PI*2);
-      loupeCtx.lineWidth = 3*dpr;
-      loupeCtx.strokeStyle = 'rgba(255,255,255,.9)';
-      loupeCtx.shadowColor = 'rgba(0,0,0,.35)';
-      loupeCtx.shadowBlur = 6*dpr;
+      loupeCtx.lineWidth = 4*dpr;
+      loupeCtx.strokeStyle = 'rgba(255,255,255,.95)';
+      loupeCtx.shadowColor = 'rgba(0,0,0,.45)';
+      loupeCtx.shadowBlur = 8*dpr;
       loupeCtx.stroke();
       loupeCtx.restore();
     }
     requestAnimationFrame(()=> loupeDrawFrame(id));
   }
   function startLoupeCanvas(){
-    videoSim.style.opacity = '0';
+    document.getElementById('stage').classList.add('loupe-mode');
     loupeCanvas.style.display = 'block';
     if(!loupeRunning){
       loupeRunning = true;
@@ -547,8 +551,8 @@
   function stopLoupeCanvas(){
     loupeRunning = false;
     loupeLoopId++;
+    document.getElementById('stage').classList.remove('loupe-mode');
     loupeCanvas.style.display = 'none';
-    if(!cbRunning) videoSim.style.opacity = '1';
   }
 
   // 실/지렁이 모양(투명, 구불구불) + 날파리 모양(작고 동그란) 부유물
@@ -715,9 +719,11 @@
     const t = severity/100;
     const res = currentCond.apply(t, currentSub) || {};
 
-    videoSim.style.filter = res.filter || 'none';
+    const loupeMode = currentCond.id==='presbyopia' && presbyopiaLoupeOn;
+    // 돋보기 모드에서는 배경 전체를 확실히 흐리게, 확대(scale)는 빼서 원 안 영상과 위치를 맞춘다
+    videoSim.style.filter = loupeMode ? `blur(${loupeBlurPx()}px) contrast(${100-16*t}%)` : (res.filter || 'none');
     videoSim.style.transformOrigin = 'center center';
-    videoSim.style.transform = currentCond.id==='presbyopia' ? `scale(${1+presbyopiaZoom*0.35})` : 'none';
+    videoSim.style.transform = (currentCond.id==='presbyopia' && !loupeMode) ? `scale(${1+presbyopiaZoom*0.35})` : 'none';
 
     // 1번-보조: 노안 돋보기 토글 버튼은 노안 항목에서만 보인다
     loupeToggle.style.display = currentCond.id==='presbyopia' ? 'flex' : 'none';
@@ -826,7 +832,7 @@
     if(currentCond.id==='presbyopia'){
       const state = presbyopiaZoom<0.35 ? '현재: 선명' : presbyopiaZoom>0.65 ? '현재: 흐림' : '현재: 보통';
       hintEl.textContent = presbyopiaLoupeOn
-        ? `🔍 화면을 눌러 돋보기 위치 이동 · 🤏 핀치로 흐림 정도 조절 · ${state}`
+        ? '🔍 손가락으로 누른 채 움직이면 동그라미 안만 잘 보여요 · 다시 누르면 돋보기 끄기'
         : `🤏 확대=가까이(흐림) · 축소=멀리(선명) · ${state}`;
     } else if(currentCond.id==='amd'){
       hintEl.textContent = '👆 화면 터치 · 암점 위치 이동';
