@@ -138,6 +138,7 @@ input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;ba
 .mbox .mic{ font-size:48px; margin-bottom:10px; }
 .mbox h3{ font-size:20px; margin:0 0 8px; color:var(--sage); }
 .mbox p{ font-size:13.5px; color:var(--ink-dim); line-height:1.7; margin:0 0 18px; }
+.mbox .maze-stats{ margin-bottom:18px; }
 .mbtns{ display:flex; flex-direction:column; gap:9px; }
 .mbtns button{ padding:14px; border-radius:12px; font-size:14.5px; font-weight:700; border:none; }
 .mbtns .bpri{ background:var(--brick); color:#fff; }
@@ -211,6 +212,9 @@ input[type=range]::-moz-range-thumb{ width:16px;height:16px;border-radius:50%;ba
       <div class="mic">&#127881;</div>
       <h3>병원 코스 완료!</h3>
       <p id="mazeVictoryMsg">접수·수납부터 약국까지<br>흔들리는 손으로 모두 찾아가셨습니다!</p>
+      <div class="maze-stats">
+        <div class="mstat"><div class="mv" id="mvFinalHits">0</div><div class="ml">선 벗어난 횟수</div></div>
+      </div>
       <div class="mbtns">
         <button class="bpri" onclick="restartMaze()">다시 도전하기</button>
         <button class="bsec" onclick="goWrite()">글쓰기 체험하러 가기 &#8594;</button>
@@ -768,7 +772,8 @@ function showMazeVictory(){
   // 시작된 판 위에 지난 승리창을 덮어씌울 수 있다 — 그새 mIdx가
   // 리셋됐다면(새 판이 시작됐다면) 조용히 무시한다.
   if(mIdx<MISSIONS.length) return;
-  document.getElementById('mazeVictoryMsg').innerHTML='흔들리는 손으로 유도선을 따라 목적지를 모두 찾아가셨습니다!<br><br>선을 <b>'+mHits+'번</b> 벗어나셨어요.';
+  document.getElementById('mazeVictoryMsg').innerHTML='흔들리는 손으로 유도선을 따라 목적지를 모두 찾아가셨습니다!';
+  document.getElementById('mvFinalHits').textContent=mHits;
   document.getElementById('mazeVictory').classList.add('show');
 }
 // 미션바는 목표를 깰 때마다 innerHTML을 통째로 비우고 다시 만들면 그때마다
