@@ -107,7 +107,8 @@
   .res-em{ font-size:32px; margin-bottom:8px; }
   .res-sc{ font-size:21px; font-weight:900; color:var(--amber); margin-bottom:6px; font-family:'JetBrains Mono',monospace; }
   .res-msg{ color:var(--ink-dim); font-size:12.5px; margin-bottom:16px; }
-  .res-unlock{ background:rgba(217,164,65,.12); border:1px solid rgba(217,164,65,.35); color:var(--amber); border-radius:10px; padding:9px 12px; font-size:12px; font-weight:700; margin-bottom:14px; }
+  .res-unlock{ display:block; width:100%; background:rgba(217,164,65,.12); border:1px solid rgba(217,164,65,.35); color:var(--amber); border-radius:10px; padding:9px 12px; font-size:12px; font-weight:700; margin-bottom:14px; font-family:inherit; cursor:pointer; }
+  .res-unlock:active{ background:rgba(217,164,65,.2); }
   .res-retry{ background:var(--bg-panel-2); border:1px solid var(--line); color:var(--ink-dim); border-radius:22px; padding:10px 20px; font-size:13px; font-weight:700; width:100%; }
 
   .tips{ margin:30px 16px 0; background:rgba(122,148,113,.08); border:1.5px solid rgba(122,148,113,.3); border-radius:18px; padding:18px 16px; }
@@ -450,11 +451,19 @@ function showRes(sit,ci,el){
   el.innerHTML='<div class="res"><div class="res-em">'+em+'</div>'
     +'<div class="res-sc">'+s.s+' / '+tot+'점</div>'
     +'<div class="res-msg">'+msg+'</div>'
-    +'<div class="res-unlock">🔓 이제 위에서 정상 청력으로 들으며 정답을 확인해보세요.</div>'
+    +'<button class="res-unlock" onclick="goListenNormal(\''+sit+'\','+ci+')">🔓 이제 위에서 정상 청력으로 들으며 정답을 확인해보세요.</button>'
     +'<button class="res-retry" onclick="retryQ(\''+sit+'\','+ci+')">🔄 다시 풀기</button></div>';
   if(wasLocked) renderCP(sit,ci,curLv[sit]);
 }
 function retryQ(sit,ci){ var key=CONTENT[sit][ci].key; QS[key]={i:0,s:0}; renderQ(sit,ci); }
+
+// 결과 화면의 "정상 청력으로 확인" 버튼 — 위쪽 레벨 선택 화면으로 스크롤하면서
+// 바로 정상 청력을 선택해 둬, 사용자가 재생 버튼만 누르면 되게 한다.
+function goListenNormal(sit,ci){
+  setLv(sit,ci,1);
+  var el = document.getElementById('pc-'+sit+'-'+ci);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
 
 var audioPool = {};
 function getAudio(key){
@@ -469,6 +478,7 @@ function getAudio(key){
 
 window.selC = selC; window.setLv = setLv; window.playAudio = playAudio;
 window.ansQ = ansQ; window.nextQ = nextQ; window.retryQ = retryQ;
+window.goListenNormal = goListenNormal;
 
 ['sw','ho'].forEach(function(sit){ buildPanel(sit); });
 

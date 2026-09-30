@@ -320,9 +320,10 @@
       tips:['어두운 실내·저녁 시간엔 더 신중히 안내해주세요','시야 가장자리에서 다가가면 놀랄 수 있어요, 정면으로 접근하세요','바닥 색이 비슷한 문턱은 꼭 말로 짚어주세요'],
       apply(t){ return { filter:`brightness(${100-22*t}%) contrast(${100-10*t}%)`, vignette:t*0.95, vignetteSoft:true, haze:t*0.32, glare:t*0.4 }; } },
     { id:'hemianopia', name:'반맹', acuity:'좌/우 시야 절반 소실', group:'aging',
+      sub:['right','left'], subLabel:{ right:'오른쪽이 안 보임', left:'왼쪽이 안 보임' },
       desc:'뇌졸중 등으로 시야의 절반(주로 한쪽)이 통째로 보이지 않습니다. 정면을 보고 있어도 한쪽에서 다가오는 사람이나 물건을 전혀 인지하지 못해요.',
       tips:['보이지 않는 쪽에서 다가가면 놀랄 수 있어요, 보이는 쪽으로 접근하세요','중요한 물건·서류는 보이는 쪽에 놓아주세요','고개를 돌려 확인하는 습관을 안내해드리면 도움이 돼요'],
-      apply(t){ return { hemi:t }; } },
+      apply(t, sub){ return { hemi:t, hemiSide: sub==='left' ? 'left' : 'right' }; } },
     { id:'floaters_dz', name:'비문증', acuity:'날파리 부유물 시야', group:'aging',
       desc:'유리체 혼탁으로 눈앞에 투명한 실이나 지렁이 모양, 작은 날파리 모양의 것들이 둥둥 떠다니는 것처럼 보입니다. 눈을 움직이면 함께 따라 움직이고, 밝은 배경을 볼 때 특히 두드러져요.',
       tips:['밝은 벽이나 하늘을 보며 대화할 때 더 불편해할 수 있어요','갑자기 부유물이 급격히 늘면 병원 진료가 필요할 수 있다고 안내해주세요','시야 방해로 놓치는 물건이 있는지 한 번 더 확인해주세요'],
@@ -548,6 +549,7 @@
     chip.innerHTML = `<span class="t">${c.name}</span><span class="a mono">${c.acuity}</span>`;
     chip.addEventListener('click', ()=>{
       currentCond = c;
+      if(c.sub) currentSub = c.sub[0]; // 이전 조건에서 쓰던 세부 옵션이 남아있지 않도록 첫 옵션으로 초기화
       amdFocus = {x:0.5, y:0.5};
       if(c.id==='accommodative') startFocusLagCycle(); else stopFocusLagCycle();
       [...chipsEl.children, ...chips2El.children].forEach(ch=>ch.classList.remove('active'));
@@ -595,11 +597,7 @@
   buildSubChips();
 
   function buildStageRow(){
-    if(currentCond.group==='aging'){
-      stageRow.classList.add('show');
-    } else {
-      stageRow.classList.remove('show');
-    }
+    stageRow.classList.add('show'); // 노화성/일반 구분 없이 모든 항목에 초기·중기·말기 단계 버튼을 보여준다
   }
   buildStageRow();
   [...stageRow.children].forEach(btn=>{
@@ -623,7 +621,7 @@
   function render(){
     condLabel.textContent = currentCond.sub ? `${currentCond.name} · ${currentCond.subLabel[currentSub]}` : currentCond.name;
     acuityBadge.textContent = currentCond.acuity;
-    sevLabel.textContent = currentCond.group==='aging' ? `체험 강도 · ${sevText(severity)}` : '체험 강도';
+    sevLabel.textContent = `체험 강도 · ${sevText(severity)}`;
     sevValue.textContent = severity+'%';
 
     const t = severity/100;
@@ -643,9 +641,11 @@
     }
 
     // hemianopia half-field (5번: 반은 완전히 안 보여야 하므로 세기와 무관하게 거의 완전 불투명)
+    // 세부 옵션(오른쪽이 안 보임/왼쪽이 안 보임)에 따라 까맣게 가려지는 쪽이 바뀐다.
     const hemi = res.hemi||0;
     ovHemi.style.opacity = hemi>0 ? 0.99 : 0;
-    ovHemi.style.right = 0; ovHemi.style.left='auto';
+    if(res.hemiSide==='left'){ ovHemi.style.left = 0; ovHemi.style.right = 'auto'; }
+    else { ovHemi.style.right = 0; ovHemi.style.left = 'auto'; }
     ovHemi.style.width = hemi>0 ? '50%' : '0';
 
     // central scotoma (3번: 초기엔 부드러운 그라데이션, 말기로 갈수록 코어가 넓어지고 경계가 또렷해짐 / 항상 정원 유지)
@@ -739,6 +739,8 @@
       hintEl.textContent = '👆 화면 터치 · 암점 위치 이동';
     } else if(currentCond.id==='accommodative'){
       hintEl.textContent = '🔄 자동 초점 흐림↔선명 반복';
+    } else if(currentCond.id==='hemianopia'){
+      hintEl.textContent = '👉 아래 버튼으로 안 보이는 쪽 전환';
     } else {
       hintEl.textContent = '✋ 손잡이 좌우 드래그 · 1(정상)·2(체험) 비교';
     }
