@@ -500,11 +500,8 @@
   const LOUPE_MAG = 1.6; // 돋보기 확대 배율
   let loupeRunning = false;
   let loupeLoopId = 0;
-  function loupeBlurPx(){
-    // 핀치로 '멀리(선명)'까지 줄여도 돋보기 체험 중에는 배경이 확실히 흐려 보이도록 최소값을 둔다
-    const t = severity/100;
-    return Math.max(3+5*t, (1+5*t)*presbyopiaZoom*1.6);
-  }
+  // 돋보기를 켜도 손가락으로 확대·축소해 둔 상태(흐림 정도·확대 배율)를 그대로 유지한다
+  function presbyScale(){ return 1+presbyopiaZoom*0.35; }
   function loupeDrawFrame(id){
     if(!loupeRunning || id !== loupeLoopId) return;
     const srcVideo = videoNormal;
@@ -531,6 +528,11 @@
       loupeCtx.translate(cx, cy);
       loupeCtx.scale(LOUPE_MAG, LOUPE_MAG);
       loupeCtx.translate(-cx, -cy);
+      // 그 아래에는 흐린 배경(videoSim)과 똑같이 화면 중심 기준 핀치 확대를 적용해 위치를 맞춘다
+      const ps = presbyScale();
+      loupeCtx.translate(targetW/2, targetH/2);
+      loupeCtx.scale(ps, ps);
+      loupeCtx.translate(-targetW/2, -targetH/2);
       loupeCtx.drawImage(srcVideo, sx, sy, sw, sh, 0, 0, targetW, targetH);
       loupeCtx.restore();
 
@@ -726,11 +728,10 @@
     const t = severity/100;
     const res = currentCond.apply(t, currentSub) || {};
 
-    const loupeMode = currentCond.id==='presbyopia' && presbyopiaLoupeOn;
-    // 돋보기 모드에서는 배경 전체를 확실히 흐리게, 확대(scale)는 빼서 원 안 영상과 위치를 맞춘다
-    videoSim.style.filter = loupeMode ? `blur(${loupeBlurPx()}px) contrast(${100-16*t}%)` : (res.filter || 'none');
+    // 노안은 돋보기를 켜도 핀치로 맞춰 둔 흐림·확대를 그대로 두고, 돋보기 원 안만 선명하게 겹쳐 그린다
+    videoSim.style.filter = res.filter || 'none';
     videoSim.style.transformOrigin = 'center center';
-    videoSim.style.transform = (currentCond.id==='presbyopia' && !loupeMode) ? `scale(${1+presbyopiaZoom*0.35})` : 'none';
+    videoSim.style.transform = currentCond.id==='presbyopia' ? `scale(${presbyScale()})` : 'none';
 
     // 1번-보조: 노안 돋보기 토글 버튼은 노안 항목에서만 보인다
     loupeToggle.style.display = currentCond.id==='presbyopia' ? 'flex' : 'none';
@@ -850,7 +851,7 @@
     if(currentCond.id==='presbyopia'){
       const state = presbyopiaZoom<0.35 ? '현재: 선명' : presbyopiaZoom>0.65 ? '현재: 흐림' : '현재: 보통';
       hintEl.textContent = presbyopiaLoupeOn
-        ? '🔍 손가락으로 누른 채 움직이면 동그라미 안만 잘 보여요 · 다시 누르면 돋보기 끄기'
+        ? `🔍 누른 채 움직이면 동그라미 안만 잘 보여요 · 🤏 핀치로 흐림 조절 · ${state}`
         : `🤏 확대=가까이(흐림) · 축소=멀리(선명) · ${state}`;
     } else if(currentCond.id==='amd'){
       hintEl.textContent = '👆 화면 터치 · 암점 위치 이동';
