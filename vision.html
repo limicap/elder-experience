@@ -29,7 +29,25 @@
   /* 백내장 빛번짐: 밝은 부분만 남겨(contrast) 크게 번지게(blur) 한 영상을 screen 합성 */
   #videoBloom{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; mix-blend-mode:screen; pointer-events:none; }
   #cbCanvas{ position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
-  #loupeCanvas{ position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
+  /* 노안: 손에 든 가까운 물건(약봉투) 카드. 카메라 배경(먼 곳)은 선명하고 이 카드만 거리에 따라 흐려진다.
+     정상 쪽(#nearNormal)은 항상 선명, 체험 쪽(#nearSim, simWrap 안)은 흐림 → 좌우 비교가 그대로 된다. */
+  .nearLayer{ position:absolute; inset:0; display:none; pointer-events:none; overflow:hidden; }
+  #nearNormal{ z-index:1; }
+  .nearCard{
+    position:absolute; left:0; top:0; width:300px; transform-origin:0 0;
+    background:#FBF8F1; color:#1D1B17; border-radius:14px; padding:16px 18px 14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45); font-family:'Noto Sans KR',sans-serif; line-height:1.45;
+  }
+  .nearCard .nc-top{ display:flex; justify-content:space-between; align-items:baseline; border-bottom:2px solid #2E7D5B; padding-bottom:6px; margin-bottom:8px; }
+  .nearCard .nc-ttl{ font-weight:800; font-size:17px; color:#2E7D5B; }
+  .nearCard .nc-ph{ font-size:10px; color:#6B675E; }
+  .nearCard .nc-name{ font-size:12px; margin-bottom:6px; }
+  .nearCard .nc-row{ display:flex; gap:6px; font-size:11.5px; margin:3px 0; }
+  .nearCard .nc-row b{ min-width:52px; color:#4A463E; }
+  .nearCard .nc-warn{ margin-top:8px; font-size:10px; color:#A3362B; background:#FBE9E6; border-radius:6px; padding:5px 7px; }
+  #nearLoupe{ position:absolute; inset:0; display:none; }
+  #nearLoupeMag{ position:absolute; inset:0; }
+  #loupeRing{ position:absolute; display:none; border:4px solid rgba(255,255,255,.95); border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.45); }
 
   .overlay{ position:absolute; inset:0; pointer-events:none; }
   #ovVignette{ background:transparent; opacity:0; transition:opacity .25s; }
@@ -93,7 +111,7 @@
     color:var(--ink); font-family:'Noto Sans KR',sans-serif; font-weight:700; font-size:12.5px;
     padding:9px 14px; border-radius:20px;
   }
-  /* 노안 돋보기 모드: 좌우 비교 없이 화면 전체를 흐리게 보여주고 원 안만 선명하게 */
+  /* 노안 돋보기 모드: 좌우 비교 없이 전체 화면으로, 흐린 약봉투 위 동그라미 안만 선명하게 */
   #stage.loupe-mode #simWrap{ clip-path:none !important; }
   #stage.loupe-mode #divider,
   #stage.loupe-mode .side-tag{ display:none; }
@@ -218,13 +236,18 @@
 
   <div id="stage">
     <video id="videoNormal" autoplay playsinline muted></video>
+    <div class="nearLayer" id="nearNormal"><div class="nearCard"><div class="nc-top"><span class="nc-ttl">약 봉 투</span><span class="nc-ph">행복약국 ☎ 02-123-4567</span></div><div class="nc-name">홍길동 님 · 2026.10.01 · 7일분</div><div class="nc-row"><b>혈압약</b><span>1일 1회 · 아침 식후 30분</span></div><div class="nc-row"><b>당뇨약</b><span>1일 2회 · 아침·저녁 식전</span></div><div class="nc-row"><b>위장약</b><span>1일 3회 · 매 식후</span></div><div class="nc-warn">⚠ 어지럽거나 손발이 붓는 경우 복용을 멈추고 의사와 상담하세요.</div></div></div>
 
     <div id="simWrap">
       <video id="videoSim" autoplay playsinline muted></video>
       <canvas id="cbCanvas"></canvas>
-      <canvas id="loupeCanvas"></canvas>
       <video id="videoGhost" autoplay playsinline muted></video>
       <video id="videoBloom" autoplay playsinline muted></video>
+      <div class="nearLayer" id="nearSim">
+        <div class="nearCard" id="nearCardSim"><div class="nc-top"><span class="nc-ttl">약 봉 투</span><span class="nc-ph">행복약국 ☎ 02-123-4567</span></div><div class="nc-name">홍길동 님 · 2026.10.01 · 7일분</div><div class="nc-row"><b>혈압약</b><span>1일 1회 · 아침 식후 30분</span></div><div class="nc-row"><b>당뇨약</b><span>1일 2회 · 아침·저녁 식전</span></div><div class="nc-row"><b>위장약</b><span>1일 3회 · 매 식후</span></div><div class="nc-warn">⚠ 어지럽거나 손발이 붓는 경우 복용을 멈추고 의사와 상담하세요.</div></div>
+        <div id="nearLoupe"><div id="nearLoupeMag"><div class="nearCard"><div class="nc-top"><span class="nc-ttl">약 봉 투</span><span class="nc-ph">행복약국 ☎ 02-123-4567</span></div><div class="nc-name">홍길동 님 · 2026.10.01 · 7일분</div><div class="nc-row"><b>혈압약</b><span>1일 1회 · 아침 식후 30분</span></div><div class="nc-row"><b>당뇨약</b><span>1일 2회 · 아침·저녁 식전</span></div><div class="nc-row"><b>위장약</b><span>1일 3회 · 매 식후</span></div><div class="nc-warn">⚠ 어지럽거나 손발이 붓는 경우 복용을 멈추고 의사와 상담하세요.</div></div></div></div>
+        <div id="loupeRing"></div>
+      </div>
       <div class="overlay" id="ovHaze"></div>
       <div class="overlay" id="ovGlare"></div>
       <div class="overlay" id="ovVignette"></div>
@@ -334,9 +357,10 @@
       tips:['같은 물건도 여러 각도에서 다시 보여주세요','바닥 턱·계단은 특히 미리 안내해주세요','시야에 빈 곳이 있을 수 있으니 천천히, 자주 확인하며 설명해주세요'],
       apply(t){ return { diabeticSpots:t, floaters:t*0.5 }; } },
     { id:'presbyopia', name:'노안', acuity:'근거리 시력저하', group:'aging',
-      desc:'수정체 탄력이 떨어져 가까운 글씨에 초점을 맞추기 어렵습니다. 먼 곳은 잘 보이지만 가까운 글씨는 흐릿하게 겹쳐 보여요.',
+      desc:'수정체 탄력이 떨어져 가까운 글씨에 초점을 맞추기 어렵습니다. 먼 곳(배경)은 잘 보이지만 손에 든 약봉투 같은 가까운 글씨는 흐릿하게 번져 보여요. 그래서 팔을 쭉 뻗어 멀리 떨어뜨려 보시곤 하는데, 그러면 글씨가 너무 작아져요.',
       tips:['서류·화면은 눈에서 조금 떨어뜨려 보여주세요','작고 가는 글씨보다 크고 굵은 글씨 자료를 준비하세요','밝은 조명 아래서 보여주면 훨씬 잘 보여요'],
-      apply(t){ return { filter:`blur(${(1+5*t)*presbyopiaZoom}px) contrast(${100-16*t*presbyopiaZoom}%)`, presbyZoom:presbyopiaZoom }; } },
+      // 배경(먼 곳)은 그대로 선명하게 두고, 가까운 물건(약봉투 카드)만 흐리게 처리한다 - render()의 updateNearCard() 참고
+      apply(t){ return { filter:'none' }; } },
     { id:'rp', name:'망막색소변성증', acuity:'야간·주변시야 소실', group:'aging',
       desc:'주변부 전체가 도넛 모양으로 고르게 좁아지며 마치 좁은 원통(터널) 속에서 보는 듯하고, 특히 어두운 곳에서 사물을 거의 분간 못할 만큼 심해져요(야맹증). 빛에 예민해 눈부심을 자주 느끼고, 명암·색 대비를 구별하는 힘이 떨어져 화면 전체가 뿌옇게 보이기도 합니다. 녹내장과 달리 사방이 골고루 좁아져 발을 헛디디거나 옆 사람과 부딪히기 쉬워요.',
       tips:['어두운 실내·저녁 시간엔 더 신중히 안내해주세요','시야 가장자리에서 다가가면 놀랄 수 있어요, 정면으로 접근하세요','바닥 색이 비슷한 문턱은 꼭 말로 짚어주세요'],
@@ -392,10 +416,10 @@
   let currentCond = CONDITIONS[0];
   let currentSub = 'protanopia';
   let severity = 55;
-  let presbyopiaZoom = 0.3; // 0=멀리(선명) ~ 1=가까이(블러)
+  let presbyopiaZoom = 0.7; // 약봉투까지의 거리: 0=팔을 쭉 뻗은 거리(작지만 선명) ~ 1=눈앞(크지만 흐림)
   let amdFocus = {x:0.5, y:0.5}; // 2번: 황반변성 암점 위치(손가락으로 이동 가능)
   let presbyopiaLoupeOn = false; // 노안 - 돋보기 모드 켬/끔
-  let loupePos = {x:0.5, y:0.5}; // 돋보기(선명하게 보이는 원) 위치
+  let loupePos = {x:0.5, y:0.56}; // 돋보기(선명하게 보이는 원) 위치
 
   const videoNormal = document.getElementById('videoNormal');
   const videoSim = document.getElementById('videoSim');
@@ -403,8 +427,12 @@
   const videoBloom = document.getElementById('videoBloom');
   const cbCanvas = document.getElementById('cbCanvas');
   const cbCtx = cbCanvas.getContext('2d', { willReadFrequently:true });
-  const loupeCanvas = document.getElementById('loupeCanvas');
-  const loupeCtx = loupeCanvas.getContext('2d');
+  const nearNormal = document.getElementById('nearNormal');
+  const nearSim = document.getElementById('nearSim');
+  const nearCardSim = document.getElementById('nearCardSim');
+  const nearLoupe = document.getElementById('nearLoupe');
+  const nearLoupeMag = document.getElementById('nearLoupeMag');
+  const loupeRing = document.getElementById('loupeRing');
   const loupeToggle = document.getElementById('loupeToggle');
   const ovHaze = document.getElementById('ovHaze');
   const ovGlare = document.getElementById('ovGlare');
@@ -492,74 +520,56 @@
     videoSim.style.opacity = '1';
   }
 
-  // 1번-보조: 노안 돋보기 모드 - 배경(화면 전체)은 videoSim에 CSS filter blur를 걸어
-  // 초점이 안 맞게 보여주고, 이 캔버스에는 손가락으로 누른 자리의 원 안쪽만
-  // 선명한 영상을 (돋보기처럼 살짝 확대해서) 그린다. 원 바깥은 투명하게 비워 둔다.
-  // iOS Safari는 캔버스 ctx.filter(blur)를 지원하지 않아 캔버스에서 흐림을 만들면
-  // 아이폰에서는 화면 전체가 선명하게 보이므로, 흐림은 반드시 CSS filter로 처리한다.
+  // 1번: 노안 - 카메라 배경(먼 곳)은 선명하게 두고, 손에 든 약봉투 카드만 거리(presbyopiaZoom)에
+  // 따라 크기와 흐림이 바뀐다. 가까이(벌리기) = 크게 보이지만 초점이 안 맞아 흐림,
+  // 멀리(오므리기) = 선명해지지만 글씨가 작아짐. 단계가 높을수록 선명하게 보이는 최소 거리가 멀어진다.
+  // 흐림은 iOS에서도 동작하도록 CSS filter로만 처리한다(캔버스 ctx.filter는 iOS Safari 미지원).
   const LOUPE_MAG = 1.6; // 돋보기 확대 배율
-  let loupeRunning = false;
-  let loupeLoopId = 0;
-  function loupeBlurPx(){
-    // 핀치로 '멀리(선명)'까지 줄여도 돋보기 체험 중에는 배경이 확실히 흐려 보이도록 최소값을 둔다
+  const NEAR_CARD_W = 300;
+  function presbyNearBlurPx(){
     const t = severity/100;
-    return Math.max(3+5*t, (1+5*t)*presbyopiaZoom*1.6);
+    const clearUntil = 0.55 - 0.45*t;            // 이 거리보다 가까우면 흐려지기 시작
+    const over = Math.max(0, (presbyopiaZoom-clearUntil)/(1-clearUntil));
+    return over * (2.5 + 8*t);
   }
-  function loupeDrawFrame(id){
-    if(!loupeRunning || id !== loupeLoopId) return;
-    const srcVideo = videoNormal;
-    if(srcVideo.videoWidth > 0){
-      const rect = document.getElementById('stage').getBoundingClientRect();
-      const dpr = Math.min(2, window.devicePixelRatio||1);
-      const targetW = Math.round(rect.width*dpr), targetH = Math.round(rect.height*dpr);
-      if(loupeCanvas.width !== targetW || loupeCanvas.height !== targetH){
-        loupeCanvas.width = targetW; loupeCanvas.height = targetH;
-      }
-      const vw = srcVideo.videoWidth, vh = srcVideo.videoHeight;
-      const scale = Math.max(targetW/vw, targetH/vh);
-      const sw = targetW/scale, sh = targetH/scale;
-      const sx = (vw-sw)/2, sy = (vh-sh)/2;
-      const cx = loupePos.x*targetW, cy = loupePos.y*targetH;
-      const radius = Math.min(targetW, targetH)*0.2;
+  function nearCardTransform(rect){
+    const scale = rect.width*(0.34 + 0.62*presbyopiaZoom)/NEAR_CARD_W;
+    const cardH = nearCardSim.offsetHeight || 190;
+    const x = rect.width/2 - NEAR_CARD_W*scale/2;
+    const y = rect.height*0.56 - cardH*scale/2;
+    return `translate(${x}px, ${y}px) scale(${scale})`;
+  }
+  function updateNearCard(){
+    const on = currentCond.id==='presbyopia';
+    nearNormal.style.display = on ? 'block' : 'none';
+    nearSim.style.display = on ? 'block' : 'none';
+    if(!on) return;
+    const rect = document.getElementById('stage').getBoundingClientRect();
+    const tf = nearCardTransform(rect);
+    document.querySelectorAll('.nearCard').forEach(c=>{ c.style.transform = tf; });
+    nearCardSim.style.filter = `blur(${presbyNearBlurPx()}px)`;
 
-      loupeCtx.clearRect(0, 0, targetW, targetH);
-      loupeCtx.save();
-      loupeCtx.beginPath();
-      loupeCtx.arc(cx, cy, radius, 0, Math.PI*2);
-      loupeCtx.clip();
-      // 돋보기 중심은 그대로 두고 주변을 LOUPE_MAG배로 키워서 그린다
-      loupeCtx.translate(cx, cy);
-      loupeCtx.scale(LOUPE_MAG, LOUPE_MAG);
-      loupeCtx.translate(-cx, -cy);
-      loupeCtx.drawImage(srcVideo, sx, sy, sw, sh, 0, 0, targetW, targetH);
-      loupeCtx.restore();
-
-      loupeCtx.save();
-      loupeCtx.beginPath();
-      loupeCtx.arc(cx, cy, radius, 0, Math.PI*2);
-      loupeCtx.lineWidth = 4*dpr;
-      loupeCtx.strokeStyle = 'rgba(255,255,255,.95)';
-      loupeCtx.shadowColor = 'rgba(0,0,0,.45)';
-      loupeCtx.shadowBlur = 8*dpr;
-      loupeCtx.stroke();
-      loupeCtx.restore();
+    const loupeOn = presbyopiaLoupeOn;
+    nearLoupe.style.display = loupeOn ? 'block' : 'none';
+    loupeRing.style.display = loupeOn ? 'block' : 'none';
+    if(loupeOn){
+      const cx = loupePos.x*rect.width, cy = loupePos.y*rect.height;
+      const r = Math.min(rect.width, rect.height)*0.2;
+      // 바깥(nearLoupe)에서 원으로 오려내고, 안쪽(nearLoupeMag)은 원 중심 기준으로 확대 → 원 위치는 고정
+      nearLoupe.style.clipPath = nearLoupe.style.webkitClipPath = `circle(${r}px at ${cx}px ${cy}px)`;
+      nearLoupeMag.style.transformOrigin = `${cx}px ${cy}px`;
+      nearLoupeMag.style.transform = `scale(${LOUPE_MAG})`;
+      loupeRing.style.left = (cx-r)+'px'; loupeRing.style.top = (cy-r)+'px';
+      loupeRing.style.width = loupeRing.style.height = (2*r)+'px';
     }
-    requestAnimationFrame(()=> loupeDrawFrame(id));
   }
   function startLoupeCanvas(){
     document.getElementById('stage').classList.add('loupe-mode');
-    loupeCanvas.style.display = 'block';
-    if(!loupeRunning){
-      loupeRunning = true;
-      loupeLoopId++;
-      loupeDrawFrame(loupeLoopId);
-    }
+    // 돋보기는 가까이 들어 흐린 상태에서 써야 의미가 있으므로, 멀리 떨어뜨려 둔 상태면 가까이 가져온다
+    if(presbyopiaZoom < 0.75) presbyopiaZoom = 0.85;
   }
   function stopLoupeCanvas(){
-    loupeRunning = false;
-    loupeLoopId++;
     document.getElementById('stage').classList.remove('loupe-mode');
-    loupeCanvas.style.display = 'none';
   }
 
   // 실/지렁이 모양(투명, 구불구불) + 날파리 모양(작고 동그란) 부유물
@@ -726,11 +736,9 @@
     const t = severity/100;
     const res = currentCond.apply(t, currentSub) || {};
 
-    const loupeMode = currentCond.id==='presbyopia' && presbyopiaLoupeOn;
-    // 돋보기 모드에서는 배경 전체를 확실히 흐리게, 확대(scale)는 빼서 원 안 영상과 위치를 맞춘다
-    videoSim.style.filter = loupeMode ? `blur(${loupeBlurPx()}px) contrast(${100-16*t}%)` : (res.filter || 'none');
-    videoSim.style.transformOrigin = 'center center';
-    videoSim.style.transform = (currentCond.id==='presbyopia' && !loupeMode) ? `scale(${1+presbyopiaZoom*0.35})` : 'none';
+    videoSim.style.filter = res.filter || 'none';
+    videoSim.style.transform = 'none';
+    updateNearCard();
 
     // 1번-보조: 노안 돋보기 토글 버튼은 노안 항목에서만 보인다
     loupeToggle.style.display = currentCond.id==='presbyopia' ? 'flex' : 'none';
@@ -848,10 +856,9 @@
 
     // 조건별 조작법 안내 (개조식으로 간결하게)
     if(currentCond.id==='presbyopia'){
-      const state = presbyopiaZoom<0.35 ? '현재: 선명' : presbyopiaZoom>0.65 ? '현재: 흐림' : '현재: 보통';
       hintEl.textContent = presbyopiaLoupeOn
         ? '🔍 손가락으로 누른 채 움직이면 동그라미 안만 잘 보여요 · 다시 누르면 돋보기 끄기'
-        : `🤏 확대=가까이(흐림) · 축소=멀리(선명) · ${state}`;
+        : '🤏 벌리기=약봉투 가까이(흐림) · 오므리기=멀리(선명하지만 작음)';
     } else if(currentCond.id==='amd'){
       hintEl.textContent = '👆 화면 터치 · 암점 위치 이동';
     } else if(currentCond.id==='accommodative'){
@@ -992,6 +999,7 @@
       const f = toFrac(e);
       loupePos.x = Math.max(0.08, Math.min(0.92, f.x));
       loupePos.y = Math.max(0.08, Math.min(0.92, f.y));
+      updateNearCard();
     }
     function start(e){
       if(currentCond.id!=='presbyopia' || !presbyopiaLoupeOn) return;
@@ -1027,6 +1035,13 @@
         render();
       }
     }, {passive:true});
+    // PC(마우스)에서는 휠로 거리 조절
+    stageEl().addEventListener('wheel', e=>{
+      if(currentCond.id!=='presbyopia') return;
+      e.preventDefault();
+      presbyopiaZoom = Math.max(0, Math.min(1, presbyopiaZoom - e.deltaY*0.0015));
+      render();
+    }, {passive:false});
     function stageEl(){ return document.getElementById('stage'); }
   })();
 
@@ -1053,7 +1068,7 @@
   divider.addEventListener('pointerdown', pointerDown);
   window.addEventListener('pointermove', pointerMove);
   window.addEventListener('pointerup', pointerUp);
-  window.addEventListener('resize', ()=> setSplit((stage.getBoundingClientRect().width)/2));
+  window.addEventListener('resize', ()=>{ setSplit((stage.getBoundingClientRect().width)/2); updateNearCard(); });
 
   const permOverlay = document.getElementById('permOverlay');
   const btnStart = document.getElementById('btnStart');
