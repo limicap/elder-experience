@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#14181C">
-<title>청각 체험 · 노인성 난청 3단계 비교</title>
+<title>청각 체험 · 중증 난청과 정상 청력 비교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -42,23 +42,20 @@
 
   .cp{ display:none; } .cp.on{ display:block; }
 
-  .lvrow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+  .lvrow{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
   .lvbtn{ padding:10px 4px 9px; border-radius:11px; border:1.5px solid var(--line); background:var(--bg-panel-2); text-align:center; color:var(--ink-faint); opacity:.55; }
   .lvbtn .lvico{ font-size:16px; display:block; margin-bottom:3px; }
   .lvbtn .lvnm{ display:block; font-size:11px; font-weight:700; }
   .lvbtn .lvsb{ display:block; font-size:9px; opacity:.8; margin-top:1px; }
   .lvbtn.lv1{ border-color:#5E9E6E; color:#5E9E6E; opacity:1; background:rgba(94,158,110,.1); }
-  .lvbtn.lv2{ border-color:var(--amber); color:var(--amber); opacity:1; background:rgba(217,164,65,.1); }
   .lvbtn.lv3{ border-color:var(--brick); color:var(--brick); opacity:1; background:rgba(176,87,74,.12); }
   .lvbtn.locked{ opacity:.5; cursor:not-allowed; }
 
   .pcard{ border-radius:16px; padding:18px; border:1.5px solid var(--line); background:var(--bg-panel); margin-bottom:14px; }
   .pcard.lv1{ border-color:#5E9E6E; }
-  .pcard.lv2{ border-color:var(--amber); }
   .pcard.lv3{ border-color:var(--brick); }
   .pbadge{ display:inline-flex; align-items:center; font-size:10.5px; font-weight:700; letter-spacing:.04em; padding:4px 11px; border-radius:99px; margin-bottom:10px; }
   .pcard.lv1 .pbadge{ background:rgba(94,158,110,.14); color:#5E9E6E; border:1px solid rgba(94,158,110,.35); }
-  .pcard.lv2 .pbadge{ background:rgba(217,164,65,.14); color:var(--amber); border:1px solid rgba(217,164,65,.35); }
   .pcard.lv3 .pbadge{ background:rgba(176,87,74,.16); color:var(--brick); border:1px solid rgba(176,87,74,.35); }
   .ptitle{ font-size:15px; font-weight:700; margin-bottom:4px; }
   .pdesc{ font-size:12.5px; color:var(--ink-dim); margin-bottom:13px; }
@@ -68,7 +65,6 @@
   .lbar-tr{ background:var(--bg-panel-2); border-radius:99px; height:6px; overflow:hidden; }
   .lbar-fl{ height:100%; border-radius:99px; }
   .pcard.lv1 .lbar-fl{ background:#5E9E6E; }
-  .pcard.lv2 .lbar-fl{ background:var(--amber); }
   .pcard.lv3 .lbar-fl{ background:var(--brick); }
 
   .sbox-hidden{ background:var(--bg-panel-2); border-left:3px solid var(--ink-faint); border-radius:9px; padding:13px 15px; margin-bottom:12px; font-size:12.5px; color:var(--ink-dim); line-height:1.75; }
@@ -77,12 +73,10 @@
   .waveWrap{ height:28px; display:flex; align-items:flex-end; justify-content:center; gap:3px; margin:8px 0 12px; }
   .waveWrap .b{ width:4px; border-radius:2px; height:3px; }
   .pcard.lv1 .waveWrap .b{ background:#5E9E6E; }
-  .pcard.lv2 .waveWrap .b{ background:var(--amber); }
   .pcard.lv3 .waveWrap .b{ background:var(--brick); }
 
   .playbtn{ width:100%; padding:13px; border:none; border-radius:24px; font-weight:700; font-size:14px; color:#1B1300; }
   .pcard.lv1 .playbtn{ background:#5E9E6E; color:#0C1A10; }
-  .pcard.lv2 .playbtn{ background:var(--amber); }
   .pcard.lv3 .playbtn{ background:var(--brick); color:#fff; }
   .playbtn:disabled{ opacity:.55; }
 
@@ -102,6 +96,24 @@
   .qnav{ display:flex; justify-content:space-between; align-items:center; }
   .qsc{ font-size:11.5px; color:var(--ink-faint); font-family:'JetBrains Mono',monospace; }
   .qnext{ background:var(--sage); color:#0C1A10; border:none; border-radius:20px; padding:9px 16px; font-size:12.5px; font-weight:700; display:none; }
+
+  .qtype{ display:inline-block; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:99px; margin-bottom:8px; background:rgba(122,148,113,.14); color:var(--sage); border:1px solid rgba(122,148,113,.35); }
+  .fsent{ font-size:14px; line-height:2.9; margin-bottom:10px; word-break:keep-all; }
+  .fblank{ display:inline-block; position:relative; vertical-align:baseline; margin:0 3px; }
+  .fblank input{ width:96px; border:none; border-bottom:2px solid var(--amber); background:transparent; color:var(--ink); font-family:inherit; font-size:14px; font-weight:700; text-align:center; padding:2px 4px; outline:none; border-radius:0; }
+  .fblank.wide input{ width:124px; }
+  .fblank.ok input{ border-color:#5E9E6E; color:#5E9E6E; }
+  .fblank.ng input{ border-color:var(--brick); color:#E08A7D; text-decoration:line-through; }
+  .fblank .fans{ display:none; position:absolute; left:50%; transform:translateX(-50%); top:100%; margin-top:-8px; white-space:nowrap; font-size:11px; font-weight:700; color:#5E9E6E; line-height:1.2; }
+  .fblank.ng .fans{ display:block; }
+  .fcheck{ width:100%; background:var(--amber); color:#1B1300; border:none; border-radius:22px; padding:11px; font-size:13.5px; font-weight:700; margin:4px 0 10px; }
+  .fcheck:disabled{ opacity:.45; }
+  .sumbox{ display:none; margin-top:16px; background:rgba(217,164,65,.1); border:1.5px solid rgba(217,164,65,.4); border-radius:16px; padding:16px 18px; text-align:center; }
+  .sumbox.show{ display:block; }
+  .sumbox h3{ font-size:14px; margin:0 0 6px; color:var(--amber); }
+  .sumbox .sum-sc{ font-size:24px; font-weight:900; color:var(--amber); font-family:'JetBrains Mono',monospace; margin-bottom:6px; }
+  .sumbox .sum-rows{ font-size:12px; color:var(--ink-dim); line-height:1.8; margin-bottom:6px; }
+  .sumbox .sum-msg{ font-size:12.5px; color:var(--ink-dim); }
 
   .res{ text-align:center; padding:14px 6px 6px; }
   .res-em{ font-size:32px; margin-bottom:8px; }
@@ -130,7 +142,7 @@
   </div>
 
   <div class="heroBadge">&#127911; 이어폰 착용 시 훨씬 효과적입니다</div>
-  <div class="heroSub">노인성 난청은 소음이 아닙니다. 같은 말소리가 단계별로 얼마나 다르게 들리는지 직접 비교해 보세요.</div>
+  <div class="heroSub">노인성 난청은 소음이 아닙니다. 먼저 중증 난청으로 듣고 객관식·받아쓰기 문제를 풀어본 뒤, 정상 청력으로 다시 들으며 얼마나 다르게 들리는지 비교해 보세요.</div>
 
   <div id="modeTabs">
     <button class="modetab on" data-sit="sw">&#128653; 지하철</button>
@@ -138,15 +150,17 @@
   </div>
 
   <div class="panel on" id="panel-sw">
-    <div class="sithd"><h2>&#128653; 지하철 귀가 상황</h2><p>안내방송을 고르고 정상&middot;경증&middot;중증으로 비교 체험하세요.</p></div>
+    <div class="sithd"><h2>&#128653; 지하철 귀가 상황</h2><p>안내방송을 골라 중증 난청으로 듣고 문제를 풀어보세요. 다 풀면 정상 청력으로 들을 수 있어요.</p></div>
     <div class="crow c3" id="crow-sw"></div>
     <div id="cps-sw"></div>
+    <div class="sumbox" id="sum-sw"></div>
   </div>
 
   <div class="panel" id="panel-ho">
-    <div class="sithd"><h2>&#127973; 병원 접수창구 상황</h2><p>안내를 고르고 정상&middot;경증&middot;중증으로 비교 체험하세요.</p></div>
+    <div class="sithd"><h2>&#127973; 병원 접수창구 상황</h2><p>안내를 골라 중증 난청으로 듣고 문제를 풀어보세요. 다 풀면 정상 청력으로 들을 수 있어요.</p></div>
     <div class="crow c2" id="crow-ho"></div>
     <div id="cps-ho"></div>
+    <div class="sumbox" id="sum-ho"></div>
   </div>
 
   <div class="tips">
@@ -184,24 +198,26 @@ var CONTENT = {
   ]
 };
 
+// 경증 단계는 쓰지 않는다 — 중증으로 먼저 듣고 문제를 푼 뒤 정상으로 확인하는 2단계 흐름.
+// (인덱스 1=정상, 3=중증은 음성 파일 접미사 n/s와 맞추기 위해 그대로 둔다)
 var LV = [null,
-  {cls:'lv1', badge:'✅ 1단계 — 정상 청력', title:'모든 자음이 선명하게 들립니다',
-   desc:'고주파 자음 포함 모든 소리가 또렷합니다.', loss:'0%'},
-  {cls:'lv2', badge:'👂 2단계 — 경증 난청', title:'고주파 자음이 흐릿해집니다',
-   desc:'ㅅ·ㅈ·ㅊ 등 자음이 손실되어 비슷한 발음이 혼동됩니다.', loss:'약 40%'},
-  {cls:'lv3', badge:'🌀 3단계 — 중증 난청', title:'자음 대부분이 들리지 않습니다',
-   desc:'말소리를 알아듣기 매우 어려운 상태입니다.', loss:'약 80%'}
+  {cls:'lv1', badge:'✅ 정상 청력', title:'모든 자음이 선명하게 들립니다',
+   desc:'고주파 자음 포함 모든 소리가 또렷합니다. 방금 풀었던 답과 비교해 보세요.', loss:'0%'},
+  null,
+  {cls:'lv3', badge:'🌀 중증 난청', title:'자음 대부분이 들리지 않습니다',
+   desc:'ㅅ·ㅈ·ㅊ 같은 고주파 자음이 사라져 비슷한 말끼리 구별하기 매우 어렵습니다.', loss:'약 80%'}
 ];
-var LNAMES = ['정상 청력','경증 난청','중증 난청'];
+var LNAMES = ['정상 청력','경증 난청','중증 난청']; // 인덱스 lv-1 (경증은 사용하지 않음)
 var SUFFS  = ['n','m','s'];
 
 var curAudio = {sw:null, ho:null};
 var curCi   = {sw:0, ho:0};
-var curLv   = {sw:2, ho:2};
+var curLv   = {sw:3, ho:3};
+var RESULTS = {}; // 콘텐츠별(key) 마지막 점수 {s, tot} — 탭 총점 계산용
 var vizTmr  = {sw:null, ho:null};
 var QS      = {}; // 콘텐츠별(key) 퀴즈 진행 상태 — 방금 들은 안내에 해당하는 것만 채워짐
-// 정상 청력은 경증·중증을 먼저 듣고 퀴즈를 풀어 정답을 맞혀봐야("이게 맞았구나") 열리는
-// 잠금 상태로 시작한다 — 처음부터 정상을 들으면 경증/중증 체험 자체가 무의미해지기 때문.
+// 정상 청력은 중증을 먼저 듣고 문제를 다 풀어봐야("이게 맞았구나") 열리는
+// 잠금 상태로 시작한다 — 처음부터 정상을 들으면 중증 체험 자체가 무의미해지기 때문.
 var lv1Unlocked = {};
 
 function buildPanel(sit){
@@ -215,10 +231,10 @@ function buildPanel(sit){
   cps.innerHTML = items.map(function(c,i){
     return '<div class="cp'+(i===0?' on':'')+'" id="cp-'+sit+'-'+i+'">'
       +'<div id="pc-'+sit+'-'+i+'"></div>'
-      +'<div class="qbox" id="qbox-'+sit+'-'+i+'" style="display:none"><h3>&#9999;&#65039; 퀴즈</h3><div class="qsub">방금 들으신 내용으로 답해 보세요.</div><div id="qb-'+sit+'-'+i+'"></div></div>'
+      +'<div class="qbox" id="qbox-'+sit+'-'+i+'" style="display:none"><h3>&#9999;&#65039; 문제 풀기</h3><div class="qsub">방금 중증 난청으로 들으신 내용으로 답해 보세요. 객관식 1문제, 받아쓰기 1문제예요.</div><div id="qb-'+sit+'-'+i+'"></div></div>'
       +'</div>';
   }).join('');
-  renderCP(sit, 0, 2);
+  renderCP(sit, 0, 3);
 }
 
 function renderCP(sit, ci, lv){
@@ -227,23 +243,23 @@ function renderCP(sit, ci, lv){
   var c = CONTENT[sit][ci], cfg = LV[lv];
   var unlocked = !!lv1Unlocked[c.key];
 
-  var lvBtns = [['✅','정상 청력','원본 음성'],['👂','경증 난청','자음 손실'],['🌀','중증 난청','심한 손실']]
-    .map(function(nm,i){
-      var idx=i+1;
+  var lvBtns = [[3,'🌀','중증 난청','먼저 들어보세요'],[1,'✅','정상 청력','원본 음성']]
+    .map(function(nm){
+      var idx=nm[0];
       if(idx===1 && !unlocked){
-        return '<button class="lvbtn locked" disabled title="경증·중증을 먼저 듣고 퀴즈를 풀면 열려요">'
+        return '<button class="lvbtn locked" disabled title="중증으로 듣고 문제를 다 풀면 열려요">'
           +'<span class="lvico">🔒</span>'
           +'<span class="lvnm">정상 청력</span>'
-          +'<span class="lvsb">퀴즈 완료 후</span></button>';
+          +'<span class="lvsb">문제 풀고 나면 열려요</span></button>';
       }
       return '<button class="lvbtn'+(lv===idx?' lv'+idx:'')+'" onclick="setLv(\''+sit+'\','+ci+','+idx+')">'
-        +'<span class="lvico">'+nm[0]+'</span>'
-        +'<span class="lvnm">'+nm[1]+'</span>'
-        +'<span class="lvsb">'+nm[2]+'</span></button>';
+        +'<span class="lvico">'+nm[1]+'</span>'
+        +'<span class="lvnm">'+nm[2]+'</span>'
+        +'<span class="lvsb">'+nm[3]+'</span></button>';
     }).join('');
 
   // 정상 단계에서도 안내 문구를 텍스트로 보여주지 않는다 — 텍스트를 한 번
-  // 읽고 나면 경증·중증으로 넘어가도 "안 들려도 이미 답을 아는" 상태가
+  // 읽고 나면 중증으로 다시 들어도 "안 들려도 이미 답을 아는" 상태가
   // 되어, 실제로 얼마나 알아듣기 어려운지 비교 체험이 되지 않기 때문이다.
   var scriptBox = '<div class="sbox-hidden">🎧 잘 들어보세요. 무슨 내용인지 파악할 수 있나요?<div class="smeta">— '+c.src+'</div></div>';
 
@@ -340,7 +356,7 @@ function selC(sit,ci){
     var cp=document.getElementById('cp-'+sit+'-'+i);
     if(cp) cp.className='cp'+(i===ci?' on':'');
   });
-  if(curLv[sit]===1 && !lv1Unlocked[CONTENT[sit][ci].key]) curLv[sit]=2;
+  if(curLv[sit]===1 && !lv1Unlocked[CONTENT[sit][ci].key]) curLv[sit]=3;
   renderCP(sit,ci,curLv[sit]);
 }
 
@@ -355,51 +371,57 @@ document.querySelectorAll('.modetab').forEach(function(t){
   });
 });
 
-// 콘텐츠(안내) 항목별로 정확히 2문제씩 — 방금 들은 그 안내에 대해서만
-// 퀴즈가 나오게 하기 위해, 예전처럼 상황(sw/ho) 전체를 합친 퀴즈가 아니라
-// CONTENT의 key(예: sw0, ph1)별로 따로 둔다.
+// 콘텐츠(안내) 항목별로 객관식 1문제 + 받아쓰기(빈칸) 1문제 — 방금 들은 그 안내에 대해서만
+// 나오도록 CONTENT의 key(예: sw0, ph1)별로 둔다. 두 문제의 답이 서로 겹치지 않게 나눴다.
+// 객관식 보기는 중증 난청에서 실제로 헷갈리는 비슷한 소리로 구성한다.
+// 받아쓰기 parts: 문자열은 그대로, {a:[정답, 인정 답...]}는 빈칸. 점수는 객관식 1점 + 빈칸당 1점.
 var QD = {
   sw0:[ // 역 이름 안내
-    {q:'"역 이름 안내" 방송에서 안내된 역 이름은?',
-     o:['시청역','종로3가역','서울역','을지로역'],
-     a:0, f:'정답! "이번 역은 시청, 시청역입니다"라고 안내했습니다. 경증·중증에서는 이 자음(ㅅ)이 손실되어 구별이 어려워집니다.'},
-    {q:'"역 이름 안내" 방송에서 내리는 문의 방향은?',
+    {type:'mc', q:'"역 이름 안내" 방송에서 내리는 문의 방향은?',
      o:['왼쪽','오른쪽','양쪽 모두','앞쪽'],
-     a:1, f:'정답! "내리실 문은 오른쪽입니다"라고 안내했습니다.'},
+     a:1, f:'"내리실 문은 오른쪽입니다"라고 안내했습니다. 중증 난청에서는 "오른쪽/왼쪽"의 받침이 뭉개져 반대쪽 문 앞에서 기다리기 쉽습니다.'},
+    {type:'fill', q:'들린 역 이름을 빈칸에 써보세요.',
+     parts:['이번 역은 ',{a:['시청','시청역']},', ',{a:['시청역','시청']},'입니다.'],
+     f:'"이번 역은 시청, 시청역입니다." — ㅅ·ㅊ 자음이 사라져 "이엉", "니청"처럼 들리기 쉽습니다.'},
   ],
   sw1:[ // 환승 안내
-    {q:'"환승 안내" 방송에서 환승 가능한 노선은?',
-     o:['1호선, 4호선','5호선, 경의중앙선','2호선, 9호선','3호선, 공항철도'],
-     a:1, f:'정답! "5호선, 경의중앙선으로 환승하실 수 있습니다"라고 안내했습니다.'},
-    {q:'"환승 안내" 방송에서 어느 역에 내려야 환승할 수 있나요?',
-     o:['시청역','종로3가역','서울역','을지로역'],
-     a:1, f:'정답! "종로3가역에서 내리시면"이라고 안내했습니다.'},
+    {type:'mc', q:'"환승 안내" 방송에서 어느 역에서 내려야 환승할 수 있나요?',
+     o:['종로5가역','종각역','종로3가역','동대문역'],
+     a:2, f:'"종로3가역에서 내리시면"이라고 안내했습니다. "3가/5가", "종로/종각"은 중증 난청에서 거의 구별되지 않습니다.'},
+    {type:'fill', q:'환승할 수 있는 노선을 빈칸에 써보세요.',
+     parts:['종로3가역에서 내리시면 ',{a:['5호선','오호선','5','오']},', ',{a:['경의중앙선','경의중앙'],wide:true},'으로 환승하실 수 있습니다.'],
+     f:'"5호선, 경의중앙선으로 환승하실 수 있습니다." — 숫자와 긴 노선 이름은 특히 놓치기 쉽습니다.'},
   ],
   sw2:[ // 안전 안내
-    {q:'"안전 안내" 방송에서 하지 말라고 한 행동은?',
-     o:['뛰어다니기','문에 기대거나 손 끼우기','큰 소리 내기','음식 먹기'],
-     a:1, f:'정답! "문에 기대거나 손을 끼우지 마세요"라고 안내했습니다.'},
-    {q:'"안전 안내" 방송에서 닫힌다고 안내한 것은?',
+    {type:'mc', q:'"안전 안내" 방송에서 닫힌다고 안내한 것은?',
      o:['스크린도어','열차 출입문','개찰구','엘리베이터'],
-     a:0, f:'정답! "스크린도어가 닫힙니다"라고 안내했습니다.'},
+     a:0, f:'"스크린도어가 닫힙니다"라고 안내했습니다.'},
+    {type:'fill', q:'하지 말라고 한 행동을 빈칸에 써보세요.',
+     parts:['문에 기대거나 ',{a:['손을 끼우지','손 끼우지'],wide:true},' 마세요.'],
+     f:'"문에 기대거나 손을 끼우지 마세요." — 안전 안내를 놓치면 문에 손이 끼는 사고로 이어질 수 있습니다.'},
   ],
   ph0:[ // 이름 호명
-    {q:'"이름 호명" 안내에서 호명된 환자 이름은?',
-     o:['김정숙','김정욱','김정수','이정숙'],
-     a:0, f:'정답! "김정숙 님?"이라고 호명했습니다. 경증·중증에서는 끝 자음(ㅅ)이 손실되어 "욱"처럼 들릴 수 있습니다.'},
-    {q:'"이름 호명" 안내에서 안내된 진료실 번호는?',
-     o:['1번','2번','3번','4번'],
-     a:2, f:'정답! "3번 진료실로 가시면 됩니다"라고 안내했습니다.'},
+    {type:'mc', q:'"이름 호명" 안내에서 호명된 환자 이름은?',
+     o:['김정욱','김정수','김정숙','이정숙'],
+     a:2, f:'"김정숙 님?"이라고 호명했습니다. 중증 난청에서는 끝 자음(ㅅ)이 손실되어 "김정욱"처럼 들리기 쉽습니다.'},
+    {type:'fill', q:'안내된 진료실 번호를 빈칸에 써보세요.',
+     parts:[{a:['3','삼','3번','삼번']},'번 진료실로 가시면 됩니다.'],
+     f:'"3번 진료실로 가시면 됩니다." — 숫자가 뭉개지면 다른 진료실 앞에서 하염없이 기다리시게 됩니다.'},
   ],
   ph1:[ // 복약 안내
-    {q:'"복약 안내"에서 설명한 약의 종류는?',
-     o:['혈압약','당뇨약','감기약','소화제'],
-     a:0, f:'정답! "이 약은 혈압약입니다"라고 안내했습니다.'},
-    {q:'"복약 안내"에서 안내한 복용 횟수와 시간은?',
-     o:['하루 두 번, 점심','하루 한 번, 아침 식후','하루 세 번, 저녁','하루 한 번, 자기 전'],
-     a:1, f:'정답! "하루 한 번, 아침 식후에 드세요"라고 안내했습니다. 자음이 손실되면 횟수·시간 모두 혼동되어 과복용 위험이 생깁니다.'},
+    {type:'mc', q:'"복약 안내"에서 설명한 약의 종류는?',
+     o:['혈당약','혈행약','혈압약','혈액약'],
+     a:2, f:'"이 약은 혈압약입니다"라고 안내했습니다. "혈압/혈당/혈행"은 중증 난청에서 거의 구별되지 않습니다.'},
+    {type:'fill', q:'복용 방법을 빈칸에 써보세요.',
+     parts:[{a:['하루 한 번','하루 1번','하루 일 번','1일 1회','하루 1회','하루 한 차례'],wide:true},', 아침 식후에 드세요. 물과 함께 ',{a:['끊지 말고','끊지 마시고'],wide:true},' 드셔야 합니다.'],
+     f:'"하루 한 번, 아침 식후에 드세요. 물과 함께 끊지 말고 드셔야 합니다." — "한 번"이 "세 번"처럼, "끊지 말고"가 "끊이 말고"처럼 들려 과복용·복약 중단 위험이 생깁니다.'},
   ]
 };
+function qPoints(q){ return q.type==='fill' ? q.parts.filter(function(p){ return typeof p!=='string'; }).length : 1; }
+function totalPoints(key){ return QD[key].reduce(function(n,q){ return n+qPoints(q); },0); }
+// 띄어쓰기·문장부호·대소문자 차이는 무시하고 비교한다
+function normAns(v){ return String(v||'').toLowerCase().replace(/[\s.,?!~·'"“”‘’()\-]/g,''); }
+function isRightBlank(v, p){ var n=normAns(v); return n!=='' && p.a.some(function(x){ return normAns(x)===n; }); }
 
 // 재생이 끝날 때마다 항상 새로 호출된다 — 이전에 이미 풀었던 상태가
 // 남아있어도 여기서 무조건 처음부터 다시 채점 상태를 만들기 때문에,
@@ -411,51 +433,122 @@ function openQuiz(sit,ci){
   if(box) box.style.display='block';
   renderQ(sit,ci);
 }
+function navHtml(sit,ci,key,s,qs){
+  return '<div class="qfb" id="fb-'+sit+'-'+ci+'"></div>'
+    +'<div class="qnav"><span class="qsc">점수 '+s.s+' / '+totalPoints(key)+'</span>'
+    +'<button class="qnext" id="qn-'+sit+'-'+ci+'" onclick="nextQ(\''+sit+'\','+ci+')">'
+    +(s.i+1<qs.length?'다음 문제 →':'결과 보기 🎉')+'</button></div>';
+}
 function renderQ(sit,ci){
   var key = CONTENT[sit][ci].key;
   var qs=QD[key], s=QS[key], el=document.getElementById('qb-'+sit+'-'+ci);
   if(!el||!s) return;
   if(s.i>=qs.length){ showRes(sit,ci,el); return; }
   var q=qs[s.i];
-  var html='<div class="qq">Q'+(s.i+1)+'. '+q.q+'</div><div class="qopts">';
+  var head='<div class="qtype">Q'+(s.i+1)+' · '+(q.type==='fill'?'받아쓰기':'객관식')+'</div><div class="qq">'+q.q+'</div>';
+  if(q.type==='fill'){
+    var bi=0, sent='<div class="fsent">';
+    q.parts.forEach(function(p){
+      if(typeof p==='string'){ sent+=p; return; }
+      sent+='<span class="fblank'+(p.wide?' wide':'')+'" id="fbl-'+sit+'-'+ci+'-'+bi+'">'
+        +'<input type="text" id="fin-'+sit+'-'+ci+'-'+bi+'" placeholder="?" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">'
+        +'<span class="fans">'+p.a[0]+'</span></span>';
+      bi++;
+    });
+    sent+='</div>';
+    el.innerHTML=head+sent
+      +'<button class="fcheck" id="fck-'+sit+'-'+ci+'" onclick="checkFill(\''+sit+'\','+ci+')">정답 확인</button>'
+      +navHtml(sit,ci,key,s,qs);
+    el.querySelectorAll('.fblank input').forEach(function(inp){
+      inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); checkFill(sit,ci); } });
+    });
+    return;
+  }
+  var html=head+'<div class="qopts">';
   q.o.forEach(function(opt,k){ html+='<button class="qopt" onclick="ansQ(\''+sit+'\','+ci+','+k+')">'+opt+'</button>'; });
-  html+='</div><div class="qfb" id="fb-'+sit+'-'+ci+'"></div>';
-  html+='<div class="qnav"><span class="qsc">점수 '+s.s+' / '+qs.length+'</span>';
-  html+='<button class="qnext" id="qn-'+sit+'-'+ci+'" onclick="nextQ(\''+sit+'\','+ci+')">'
-    +(s.i+1<qs.length?'다음 문제 →':'결과 보기 🎉')+'</button></div>';
+  html+='</div>'+navHtml(sit,ci,key,s,qs);
   el.innerHTML=html;
+}
+function showFeedback(sit,ci,key,good,text){
+  var fb=document.getElementById('fb-'+sit+'-'+ci);
+  fb.textContent=(good?'✅ ':'❌ ')+text;
+  fb.className='qfb show '+(good?'ok':'ng');
+  var sc=document.querySelector('#qb-'+sit+'-'+ci+' .qsc');
+  if(sc) sc.textContent='점수 '+QS[key].s+' / '+totalPoints(key);
+  document.getElementById('qn-'+sit+'-'+ci).style.display='block';
 }
 function ansQ(sit,ci,chosen){
   var key = CONTENT[sit][ci].key;
   var q=QD[key][QS[key].i];
   var opts=document.querySelectorAll('#qb-'+sit+'-'+ci+' .qopt');
+  if(opts[0] && opts[0].disabled) return;
   opts.forEach(function(o){ o.disabled=true; });
   opts[q.a].classList.add('ok');
   if(chosen!==q.a) opts[chosen].classList.add('ng');
   else QS[key].s++;
-  var fb=document.getElementById('fb-'+sit+'-'+ci);
-  fb.textContent=(chosen===q.a?'✅ ':'❌ ')+q.f;
-  fb.className='qfb show '+(chosen===q.a?'ok':'ng');
-  document.getElementById('qn-'+sit+'-'+ci).style.display='block';
+  showFeedback(sit,ci,key,chosen===q.a,q.f);
+}
+function checkFill(sit,ci){
+  var key = CONTENT[sit][ci].key;
+  var q=QD[key][QS[key].i];
+  var btn=document.getElementById('fck-'+sit+'-'+ci);
+  if(!btn || btn.disabled) return;
+  btn.disabled=true;
+  var blanks=q.parts.filter(function(p){ return typeof p!=='string'; });
+  var right=0;
+  blanks.forEach(function(p,i){
+    var inp=document.getElementById('fin-'+sit+'-'+ci+'-'+i);
+    var wrap=document.getElementById('fbl-'+sit+'-'+ci+'-'+i);
+    inp.disabled=true;
+    var ok=isRightBlank(inp.value,p);
+    if(!inp.value.trim()) inp.value='(빈칸)';
+    wrap.classList.add(ok?'ok':'ng');
+    if(ok) right++;
+  });
+  QS[key].s+=right;
+  var lead = right===blanks.length ? '빈칸 '+blanks.length+'개 모두 맞혔어요! ' : '빈칸 '+blanks.length+'개 중 '+right+'개 맞혔어요. ';
+  showFeedback(sit,ci,key,right===blanks.length,lead+q.f);
 }
 function nextQ(sit,ci){ var key=CONTENT[sit][ci].key; QS[key].i++; renderQ(sit,ci); }
 function showRes(sit,ci,el){
   var key = CONTENT[sit][ci].key;
-  var s=QS[key],tot=QD[key].length,pct=Math.round(s.s/tot*100);
+  var s=QS[key],tot=totalPoints(key),pct=Math.round(s.s/tot*100);
   var em=pct>=100?'🏆':pct>=50?'👍':'💪';
-  var msg=pct>=100?'훌륭합니다! 방금 들으신 내용을 정확히 기억하셨어요.':
-          pct>=50?'잘 하셨어요! 절반은 맞히셨습니다.':
-                  '다시 들으며 노인의 어려움을 느껴보세요.';
+  var msg=pct>=100?'훌륭합니다! 중증 난청 음성인데도 모두 맞히셨어요.':
+          pct>=50?'잘 하셨어요! 하지만 어르신들은 이 정도로도 놓치는 정보가 생겨요.':
+                  '거의 알아듣기 어려우셨죠? 어르신들이 매일 겪는 상황이에요.';
   var wasLocked = !lv1Unlocked[key];
   lv1Unlocked[key] = true;
+  RESULTS[key] = {s:s.s, tot:tot};
   el.innerHTML='<div class="res"><div class="res-em">'+em+'</div>'
     +'<div class="res-sc">'+s.s+' / '+tot+'점</div>'
     +'<div class="res-msg">'+msg+'</div>'
     +'<button class="res-unlock" onclick="goListenNormal(\''+sit+'\','+ci+')">🔓 이제 위에서 정상 청력으로 들으며 정답을 확인해보세요.</button>'
     +'<button class="res-retry" onclick="retryQ(\''+sit+'\','+ci+')">🔄 다시 풀기</button></div>';
   if(wasLocked) renderCP(sit,ci,curLv[sit]);
+  renderSummary(sit);
 }
 function retryQ(sit,ci){ var key=CONTENT[sit][ci].key; QS[key]={i:0,s:0}; renderQ(sit,ci); }
+
+// 상황(지하철/병원)의 안내를 모두 풀면 그 탭의 총점을 보여준다 — 다시 풀면 마지막 점수로 갱신
+function renderSummary(sit){
+  var box=document.getElementById('sum-'+sit);
+  if(!box) return;
+  var items=CONTENT[sit];
+  var done=items.filter(function(c){ return RESULTS[c.key]; });
+  if(done.length<items.length){ box.className='sumbox'; return; }
+  var s=0,tot=0;
+  var rows=items.map(function(c){ var r=RESULTS[c.key]; s+=r.s; tot+=r.tot; return c.icon+' '+c.label+' '+r.s+' / '+r.tot+'점'; });
+  var pct=Math.round(s/tot*100);
+  var msg=pct>=80?'중증 난청 음성으로도 꽤 알아들으셨네요. 그래도 어르신께는 천천히, 또렷하게 다시 안내해 주세요.':
+          pct>=50?'절반 정도만 알아들을 수 있었어요. 어르신들은 이렇게 놓친 정보로 길을 잃거나 약을 잘못 드시기도 해요.':
+                  '대부분 알아듣기 어려우셨죠? 중요한 내용은 얼굴을 마주 보고 메모로도 전달해 주세요.';
+  box.innerHTML='<h3>'+(sit==='sw'?'🚇 지하철':'🏥 병원 접수')+' 총점</h3>'
+    +'<div class="sum-sc">'+s+' / '+tot+'점</div>'
+    +'<div class="sum-rows">'+rows.join('<br>')+'</div>'
+    +'<div class="sum-msg">'+msg+'</div>';
+  box.className='sumbox show';
+}
 
 // 결과 화면의 "정상 청력으로 확인" 버튼 — 위쪽 레벨 선택 화면으로 스크롤하면서
 // 바로 정상 청력을 선택해 둬, 사용자가 재생 버튼만 누르면 되게 한다.
@@ -477,7 +570,7 @@ function getAudio(key){
 }
 
 window.selC = selC; window.setLv = setLv; window.playAudio = playAudio;
-window.ansQ = ansQ; window.nextQ = nextQ; window.retryQ = retryQ;
+window.ansQ = ansQ; window.nextQ = nextQ; window.retryQ = retryQ; window.checkFill = checkFill;
 window.goListenNormal = goListenNormal;
 
 ['sw','ho'].forEach(function(sit){ buildPanel(sit); });

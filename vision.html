@@ -26,6 +26,8 @@
   #simWrap{ position:absolute; inset:0; z-index:2; overflow:hidden; clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
   #videoSim{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   #videoGhost{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; mix-blend-mode:screen; }
+  /* 백내장 빛번짐: 밝은 부분만 남겨(contrast) 크게 번지게(blur) 한 영상을 screen 합성 */
+  #videoBloom{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; mix-blend-mode:screen; pointer-events:none; }
   #cbCanvas{ position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
   #loupeCanvas{ position:absolute; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
 
@@ -222,6 +224,7 @@
       <canvas id="cbCanvas"></canvas>
       <canvas id="loupeCanvas"></canvas>
       <video id="videoGhost" autoplay playsinline muted></video>
+      <video id="videoBloom" autoplay playsinline muted></video>
       <div class="overlay" id="ovHaze"></div>
       <div class="overlay" id="ovGlare"></div>
       <div class="overlay" id="ovVignette"></div>
@@ -314,7 +317,10 @@
       apply(t){ const e=Math.pow(t,1.5);
         // 말기에도 아무것도 안 보일 정도로 뭉개지지 않도록 블러·안개는 완만하게 올리고,
         // 대신 백내장 특유의 누런 색조(sepia)와 밝은 빛이 번지는 느낌(glare)을 강조한다.
-        return { filter:`blur(${1+4.5*e}px) contrast(${100-38*e}%) saturate(${100-35*e}%) sepia(${18+45*e}%) brightness(${100+4*t}%)`, haze:e*0.55, glare:t*0.45 }; } },
+        // 누런 색조는 sepia를 올리고 채도를 살짝 올려 회색이 아닌 '노랗게' 보이도록,
+        // 빛번짐은 밝은 부분(전등·창문·화면)에서 빛이 퍼져 나가도록 bloom으로 표현한다.
+        return { filter:`blur(${1+4*e}px) contrast(${100-30*e}%) sepia(${35+55*t}%) saturate(${115+45*t}%) hue-rotate(${-6*t}deg) brightness(${102+6*t}%)`,
+          haze:e*0.4, hazeColor:`rgba(240,210,120,0.55)`, glare:t*0.25, bloom:0.35+0.65*t }; } },
     { id:'glaucoma', name:'녹내장', acuity:'비대칭 시야결손', group:'aging',
       desc:'중심 시력은 말기까지 뚜렷하게 잘 유지되지만, 코 쪽이나 위아래 시야부터 불규칙하게 지워지듯 사라집니다. 눈부심은 심하지 않고 서서히 흐릿해지는 느낌이며, 반대쪽 눈이 보완해줘서 스스로는 한참 눈치채지 못하는 경우가 많아요.',
       tips:['옆·뒤에서 갑자기 말을 걸거나 손대지 마세요','정면으로 천천히 다가가 인기척을 먼저 알려주세요','이동 중 발밑 턱이나 장애물을 말로 알려주세요'],
@@ -394,6 +400,7 @@
   const videoNormal = document.getElementById('videoNormal');
   const videoSim = document.getElementById('videoSim');
   const videoGhost = document.getElementById('videoGhost');
+  const videoBloom = document.getElementById('videoBloom');
   const cbCanvas = document.getElementById('cbCanvas');
   const cbCtx = cbCanvas.getContext('2d', { willReadFrequently:true });
   const loupeCanvas = document.getElementById('loupeCanvas');
@@ -493,11 +500,8 @@
   const LOUPE_MAG = 1.6; // 돋보기 확대 배율
   let loupeRunning = false;
   let loupeLoopId = 0;
-  function loupeBlurPx(){
-    // 핀치로 '멀리(선명)'까지 줄여도 돋보기 체험 중에는 배경이 확실히 흐려 보이도록 최소값을 둔다
-    const t = severity/100;
-    return Math.max(3+5*t, (1+5*t)*presbyopiaZoom*1.6);
-  }
+  // 돋보기를 켜도 손가락으로 확대·축소해 둔 상태(흐림 정도·확대 배율)를 그대로 유지한다
+  function presbyScale(){ return 1+presbyopiaZoom*0.35; }
   function loupeDrawFrame(id){
     if(!loupeRunning || id !== loupeLoopId) return;
     const srcVideo = videoNormal;
@@ -524,6 +528,11 @@
       loupeCtx.translate(cx, cy);
       loupeCtx.scale(LOUPE_MAG, LOUPE_MAG);
       loupeCtx.translate(-cx, -cy);
+      // 그 아래에는 흐린 배경(videoSim)과 똑같이 화면 중심 기준 핀치 확대를 적용해 위치를 맞춘다
+      const ps = presbyScale();
+      loupeCtx.translate(targetW/2, targetH/2);
+      loupeCtx.scale(ps, ps);
+      loupeCtx.translate(-targetW/2, -targetH/2);
       loupeCtx.drawImage(srcVideo, sx, sy, sw, sh, 0, 0, targetW, targetH);
       loupeCtx.restore();
 
@@ -719,11 +728,10 @@
     const t = severity/100;
     const res = currentCond.apply(t, currentSub) || {};
 
-    const loupeMode = currentCond.id==='presbyopia' && presbyopiaLoupeOn;
-    // 돋보기 모드에서는 배경 전체를 확실히 흐리게, 확대(scale)는 빼서 원 안 영상과 위치를 맞춘다
-    videoSim.style.filter = loupeMode ? `blur(${loupeBlurPx()}px) contrast(${100-16*t}%)` : (res.filter || 'none');
+    // 노안은 돋보기를 켜도 핀치로 맞춰 둔 흐림·확대를 그대로 두고, 돋보기 원 안만 선명하게 겹쳐 그린다
+    videoSim.style.filter = res.filter || 'none';
     videoSim.style.transformOrigin = 'center center';
-    videoSim.style.transform = (currentCond.id==='presbyopia' && !loupeMode) ? `scale(${1+presbyopiaZoom*0.35})` : 'none';
+    videoSim.style.transform = currentCond.id==='presbyopia' ? `scale(${presbyScale()})` : 'none';
 
     // 1번-보조: 노안 돋보기 토글 버튼은 노안 항목에서만 보인다
     loupeToggle.style.display = currentCond.id==='presbyopia' ? 'flex' : 'none';
@@ -774,6 +782,17 @@
     ovHaze.style.opacity = haze>0 ? Math.min(1, 0.26+haze*0.72) : 0;
     ovHaze.style.backdropFilter = `blur(${4+haze*14}px)`;
     ovHaze.style.webkitBackdropFilter = ovHaze.style.backdropFilter;
+    ovHaze.style.background = res.hazeColor || '';
+
+    // bloom (백내장 빛번짐) - 밝은 영역만 남긴 뒤 크게 흐려서 원본 위에 screen으로 더한다
+    const bloom = res.bloom||0;
+    if(bloom>0){
+      // grayscale로 밝기(휘도) 기준으로만 걸러서, 색이 진한 물체가 아니라 실제로 밝은 빛만 번지게 한다
+      videoBloom.style.filter = `grayscale(100%) brightness(${68-6*bloom}%) contrast(${500+300*bloom}%) blur(${12+26*bloom}px) brightness(${200+160*bloom}%) sepia(80%) saturate(220%)`;
+      videoBloom.style.opacity = Math.min(1, 0.45+bloom*0.55);
+    } else {
+      videoBloom.style.opacity = 0;
+    }
 
     // glare
     const glare = res.glare||0;
@@ -832,7 +851,7 @@
     if(currentCond.id==='presbyopia'){
       const state = presbyopiaZoom<0.35 ? '현재: 선명' : presbyopiaZoom>0.65 ? '현재: 흐림' : '현재: 보통';
       hintEl.textContent = presbyopiaLoupeOn
-        ? '🔍 손가락으로 누른 채 움직이면 동그라미 안만 잘 보여요 · 다시 누르면 돋보기 끄기'
+        ? `🔍 누른 채 움직이면 동그라미 안만 잘 보여요 · 🤏 핀치로 흐림 조절 · ${state}`
         : `🤏 확대=가까이(흐림) · 축소=멀리(선명) · ${state}`;
     } else if(currentCond.id==='amd'){
       hintEl.textContent = '👆 화면 터치 · 암점 위치 이동';
@@ -1053,6 +1072,7 @@
       videoNormal.srcObject = stream;
       videoSim.srcObject = stream;
       videoGhost.srcObject = stream;
+      videoBloom.srcObject = stream;
       permOverlay.style.display='none';
       render();
     }catch(err){

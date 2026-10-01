@@ -14,8 +14,9 @@ of aging for the visitor:
   hemianopia left/right toggle.
 - **games.html** — 물건 찾기 · 키오스크 주문 · 지하철 노선도 찾기 · 카메라
   체험, 4가지 게임.
-- **hearing.html** — 퀴즈로 맞혀보기 · 지하철·병원 안내음성 정상·경증·중증
-  비교.
+- **hearing.html** — 지하철·병원 안내음성을 중증 난청으로 먼저 듣고 안내마다
+  객관식 1 + 받아쓰기(빈칸) 1문제를 풀면 정상 청력이 열리는 흐름. 안내별 점수와
+  탭(지하철/병원) 총점 표시. 음성은 `assets/audio/*_s.mp3`(중증)·`*_n.mp3`(정상).
 - **tremor.html** — 미로 통과 · 따라쓰기 채점, 2가지 방식 선택. The maze mode
   overlays a room-grid derived from the real hospital floor plan photo
   (`assets/img/hospital_map.jpg`) with a walkability grid + BFS pathfinding
