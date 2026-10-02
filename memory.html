@@ -270,6 +270,28 @@
 
   function setBadge(text){ phaseBadge.textContent = text; }
   function scenario(){ return SCENARIOS[scenarioIndex]; }
+  // 탭별 마지막 점수 — 4가지를 모두 마치면 결과 화면에 전체 점수를 함께 보여준다 (다시 하면 갱신)
+  const TAB_NAMES = ['🛒 장보기','🗺️ 가는 길','💊 약 정리','🏠 일상 판단'];
+  const RESULTS = {};
+  function overallHTML(){
+    const done = TAB_NAMES.map((_,i)=>RESULTS[i]).filter(Boolean);
+    if(done.length < TAB_NAMES.length){
+      const left = TAB_NAMES.filter((_,i)=>!RESULTS[i]);
+      return `<div class="resultLists"><div class="rl"><b style="color:var(--amber);">전체 결과까지 ${left.length}개 남았어요</b>남은 체험: ${left.join(', ')}</div></div>`;
+    }
+    let sc=0, mx=0;
+    const rows = TAB_NAMES.map((n,i)=>{ const r=RESULTS[i]; sc+=r.s; mx+=r.max; return `<div style="display:flex;justify-content:space-between;"><span>${n}</span><span class="mono">${r.s} / ${r.max}</span></div>`; }).join('');
+    const pct = Math.round(sc/mx*100);
+    const msg = pct>=80 ? '잘 기억하고 판단하셨어요. 그래도 어르신께는 늘 천천히, 한 번에 하나씩 안내해 주세요.'
+              : pct>=50 ? '잠깐 다른 일을 하는 것만으로도 기억이 흐려졌죠? 어르신은 이런 순간을 매일 겪습니다.'
+              : '많이 어려우셨죠? 어르신께는 메모·반복 안내·공감이 꼭 필요합니다.';
+    return `<div class="reflect" style="border-left-color:var(--teal);">
+      <div class="rt" style="color:#7FC0BB;">전체 결과 · 4가지 체험</div>
+      <div class="resultScore" style="font-size:30px;text-align:center;margin:2px 0 8px;">${sc} / ${mx} <span style="font-size:16px;">(${pct}%)</span></div>
+      <div style="font-size:13px;color:var(--ink-dim);line-height:1.9;margin-bottom:8px;">${rows}</div>
+      <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.6;">${msg}</div>
+    </div>`;
+  }
   function reflectHTML(qs){
     return `<div class="reflect"><div class="rt">체험 후 생각해보기</div>${qs.map(q=>`<div class="rq">${q}</div>`).join('')}</div>`;
   }
@@ -557,6 +579,7 @@
 
   function finishScenario(correct, max, extraHTML){
     const sc = scenario();
+    RESULTS[scenarioIndex] = {s:correct, max};
     setBadge('결과');
     stage.innerHTML = '';
     stage.scrollTop = 0;
@@ -574,6 +597,7 @@
         · 이미 말한 내용을 다시 물어봐도 짜증내지 말고 차분히 반복해주세요
       </div>
       ${reflectHTML(sc.reflect)}
+      ${overallHTML()}
       <div class="btnRow">
         <button class="ghostbtn" id="againBtn">다시 하기</button>
         <button class="bigbtn" id="nextBtn">다음 체험 →</button>
@@ -645,6 +669,7 @@
     stage.innerHTML = '';
     stage.scrollTop = 0;
     const right = dResults.filter(Boolean).length, total = dList.length;
+    RESULTS[3] = {s:right, max:total};
     const pct = Math.round(right/total*100);
     const msg = pct>=80 ? '어르신의 마음을 잘 이해하고 계세요. 현장에서도 이 태도를 지켜주세요.'
               : pct>=50 ? '절반 넘게 맞히셨어요. 틀린 상황의 해설을 다시 떠올려 보세요.'
@@ -662,6 +687,7 @@
         · 말로만 안심시키기보다 함께 확인하고, 앞에서 천천히 다가가 주세요
       </div>
       ${reflectHTML(DAILY_REFLECT)}
+      ${overallHTML()}
       <div class="btnRow">
         <button class="ghostbtn" id="againBtn">다시 하기</button>
         <button class="bigbtn" id="nextBtn">다음 체험 →</button>
