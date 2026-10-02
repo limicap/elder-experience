@@ -32,8 +32,18 @@
   #phaseBadge{ font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--bg-deep);
     background:var(--amber); padding:4px 9px; border-radius:5px; white-space:nowrap; }
 
+  /* 체험별 탭 — 각 체험을 이어서가 아니라 원하는 것부터 따로 해볼 수 있게 */
+  #tabs{ flex-shrink:0; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:10px 12px; background:var(--bg-panel); border-bottom:1px solid var(--line); }
+  .tab{ background:var(--bg-panel-2); border:1.5px solid var(--line); border-radius:12px; padding:8px 2px 7px; color:var(--ink-dim);
+    font-family:'Noto Sans KR',sans-serif; font-size:11.5px; font-weight:700; line-height:1.3; cursor:pointer; }
+  .tab .ti{ display:block; font-size:17px; margin-bottom:2px; }
+  .tab.on{ border-color:var(--amber); background:rgba(217,164,65,0.14); color:var(--amber); }
+
+  /* 내용이 길어 넘칠 때 위쪽이 잘리지 않도록 가운데 정렬은 margin:auto로 처리 */
   #stage{ position:relative; flex:1; min-height:0; overflow-y:auto;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:26px 22px; text-align:center; gap:18px; }
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:22px 20px 28px; text-align:center; gap:18px; }
+  #stage > :first-child{ margin-top:auto; }
+  #stage > :last-child{ margin-bottom:auto; }
 
   .eyebrow{ font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; letter-spacing:.1em; color:var(--amber); }
   .title{ font-size:21px; font-weight:700; margin:0; }
@@ -103,6 +113,35 @@
   .note{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:14px; padding:14px 16px;
     font-size:13px; color:var(--ink-dim); line-height:1.65; max-width:340px; text-align:left; }
   .note b{ color:var(--amber); }
+
+  .resultLists{ display:flex; flex-direction:column; gap:8px; max-width:340px; width:100%; text-align:left; font-size:13px; line-height:1.6; }
+  .resultLists .rl{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; }
+  .resultLists .rl b{ display:block; font-size:11.5px; margin-bottom:2px; }
+  .reflect{ background:var(--bg-panel-2); border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:0 14px 14px 0;
+    padding:14px 16px; max-width:340px; width:100%; text-align:left; }
+  .reflect .rt{ font-size:11.5px; font-weight:700; color:var(--amber); letter-spacing:.06em; margin-bottom:8px; }
+  .reflect .rq{ font-size:13px; color:var(--ink-dim); line-height:1.65; padding-left:14px; position:relative; margin-bottom:6px; }
+  .reflect .rq::before{ content:'—'; position:absolute; left:0; color:var(--amber); }
+  .btnRow{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+  /* 일상 판단 */
+  .dProg{ display:flex; gap:4px; max-width:360px; width:100%; }
+  .dProg i{ flex:1; height:5px; border-radius:3px; background:var(--bg-panel-2); }
+  .dProg i.ok{ background:var(--teal); } .dProg i.ng{ background:var(--brick); } .dProg i.cur{ background:var(--amber); }
+  .dCard{ max-width:360px; width:100%; text-align:left; display:flex; flex-direction:column; gap:10px; }
+  .dScene{ background:var(--bg-panel-2); border:1px solid var(--line); border-radius:14px; padding:13px 15px; font-size:14.5px; line-height:1.7; color:var(--ink); }
+  .dMind{ background:rgba(176,87,74,0.08); border:1px solid rgba(176,87,74,0.3); border-radius:14px; padding:12px 15px; font-size:13px; line-height:1.7; color:var(--ink-dim); }
+  .dMind .ml{ font-size:11px; font-weight:700; color:#E08A7D; margin-bottom:4px; }
+  .dMind .th{ font-style:italic; margin-top:6px; }
+  .dQ{ font-size:14.5px; font-weight:700; line-height:1.55; margin-top:4px; }
+  .dOpts{ display:flex; flex-direction:column; gap:8px; }
+  .dOpt{ background:var(--bg-panel-2); border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; font-size:13.5px; line-height:1.5;
+    color:var(--ink); text-align:left; font-family:'Noto Sans KR',sans-serif; cursor:pointer; }
+  .dOpt.correct{ border-color:var(--teal); background:rgba(76,139,135,0.18); color:#7FC0BB; }
+  .dOpt.wrong{ border-color:var(--brick); background:rgba(176,87,74,0.18); color:#E08A7D; }
+  .dFb{ border-radius:12px; padding:11px 14px; font-size:13px; line-height:1.65; }
+  .dFb.ok{ background:rgba(76,139,135,0.14); border:1px solid var(--teal); color:#7FC0BB; }
+  .dFb.ng{ background:rgba(176,87,74,0.14); border:1px solid var(--brick); color:#E08A7D; }
 </style>
 </head>
 <body>
@@ -111,6 +150,12 @@
     <a id="homeBtn" href="index.html">&#8592;</a>
     <h1>기억력 체험</h1>
     <span id="phaseBadge" class="mono">시작 전</span>
+  </div>
+  <div id="tabs">
+    <button class="tab on" data-tab="0"><span class="ti">&#128722;</span>장보기</button>
+    <button class="tab" data-tab="1"><span class="ti">&#128506;&#65039;</span>가는 길</button>
+    <button class="tab" data-tab="2"><span class="ti">&#128138;</span>약 정리</button>
+    <button class="tab" data-tab="3"><span class="ti">&#127968;</span>일상 판단</button>
   </div>
   <div id="stage"></div>
 </div>
@@ -128,14 +173,17 @@
       id:'grocery', title:'장보기 목록 기억하기',
       studyLabel:'오늘 사야 할 물건이에요. 잘 기억해두세요',
       items:['우유','계란','두부','사과','식빵'],
-      distractors:['참치캔','당근','바나나','라면'],
-      studySeconds:5, recallType:'multiselect'
+      // 정답과 비슷한 단어(우유↔두유 등)를 섞어 실제로 헷갈리게 한다
+      distractors:['두유','메추리알','순두부','배','모닝빵','라면','바나나'],
+      studySeconds:5, recallType:'multiselect',
+      reflect:['비슷한 단어 사이에서 얼마나 헷갈리셨나요?','어르신이 심부름에서 비슷한 다른 물건을 사 오시는 이유가 이해되셨나요?','메모·라벨·사진처럼 기억을 돕는 도구가 왜 중요한지 생각해보세요.']
     },
     {
       id:'route', title:'가는 길 순서 기억하기',
       studyLabel:'보건소 가는 길, 순서대로 알려드릴게요',
       steps:['정문으로 들어가기','2층으로 올라가기','파란 문으로 들어가기'],
-      studySeconds:5, recallType:'ordertap'
+      studySeconds:5, recallType:'ordertap',
+      reflect:['계산 문제를 잠깐 풀었을 뿐인데 순서가 헷갈리셨나요?','어르신이 같은 길을 여러 번 물어보시는 이유가 이해되셨나요?','길을 안내할 때 한 번에 한 단계씩, 표지판을 함께 가리켜 드리면 어떨지 생각해보세요.']
     },
     {
       id:'pillbox', title:'약 정리하기',
@@ -146,43 +194,128 @@
         {id:'sl', name:'수면제', time:'저녁', color:'var(--amber)'}
       ],
       decoys:[{id:'vit', name:'비타민', color:'var(--ink-faint)'}],
-      studySeconds:6, recallType:'pillsort'
+      studySeconds:6, recallType:'pillsort',
+      reflect:['약 이름과 시간을 함께 기억하기가 얼마나 어려웠나요?','어르신이 약을 거르거나 두 번 드시는 이유가 이해되셨나요?','요일·시간별 약통이나 복약 알림이 왜 필요한지 생각해보세요.']
     }
   ];
 
-  let scenarioIndex = 0;
-  let totalCorrect = 0, totalMax = 0;
+  // 일상 판단: 치매 어르신이 실제로 겪는 혼란 상황 — 채점은 "사회복무요원으로서의 응대" 하나만,
+  // 혼란 정보와 어르신의 생각은 상황을 실감 나게 보여주는 장면으로만 쓴다.
+  // opts[0]이 정답(화면에는 섞어서 보여준다).
+  const DAILY = [
+    { scene:'아침 식사를 막 마쳤습니다. 식탁 위에 아침 약이 있습니다.',
+      confuse:'방금 약을 삼켰던 것 같기도 한데, 확실히 기억이 나지 않습니다. 약봉지는 그대로 있습니다.',
+      thought:'약을 먹은 것 같기도 하고… 아까 물을 마신 게 약을 먹은 건지 그냥 물을 마신 건지… 어제 먹은 건지 오늘 먹은 건지도 모르겠어.',
+      q:'어르신이 약을 드셨는지 확실하지 않을 때, 어떻게 도와드리는 것이 좋을까요?',
+      opts:['약봉지 상태를 함께 확인하고, 안 드셨으면 복용을 도와드린다','약이 있으니 그냥 드시라고 한다','기억이 안 나시면 점심 약과 함께 드시라고 한다','약은 어르신 스스로 챙기시도록 둔다'],
+      explain:'약봉지를 함께 확인하면 이중 복용을 막을 수 있어요. 어르신이 기억이 불확실할 때 얼마나 불안한지 생각해보세요.' },
+    { scene:'어르신이 주방에서 나온 뒤, 가스레인지를 껐는지 기억이 나지 않는다며 불안해하십니다.',
+      confuse:'오늘 아침에 국을 끓였습니다. 국냄비는 식탁에 있습니다.',
+      thought:'국을 올려놨나? 아니 내렸나? 가스를 켰던 것 같은데… 껐던 것도 같고… 불이 나면 어떡하지.',
+      q:'어르신이 가스를 껐는지 반복 확인하려 할 때 어떻게 대응하면 좋을까요?',
+      opts:['함께 주방에 가서 가스레인지 상태를 직접 확인해드린다','국이 식탁에 있으니 껐을 거라고 안심시킨다','냄새가 없으면 괜찮다고 설명한다','다음에 혼자 확인하시도록 알려드린다'],
+      explain:'직접 확인해드리는 것이 가장 효과적입니다. "괜찮을 거예요"라는 말만으로는 어르신의 불안이 풀리지 않습니다.' },
+    { scene:'점심시간입니다. 어르신이 "오늘 밥을 한 끼도 안 먹었다"고 하십니다.',
+      confuse:'아침을 먹은 것 같기도 하고 안 먹은 것 같기도 합니다. 배가 고픈지 잘 모르겠습니다.',
+      thought:'아침을 먹었나? 먹은 것 같은데… 배가 고픈 것 같기도 하고 아닌 것 같기도 하고. 왜 다들 두 번째 식사라고 하는 거지?',
+      q:'어르신이 "밥을 안 먹었다"고 우기실 때 어떻게 대응하면 좋을까요?',
+      opts:['논쟁하지 않고 "배가 고프셨군요"라고 공감하며 부드럽게 식사로 안내한다','아침을 드셨다는 기록을 보여드리며 설명한다','드시고 싶으시면 마음대로 드셔도 된다고 한다','나중에 간식으로 대신 드시라고 한다'],
+      explain:'"아까 드셨잖아요"라는 말은 어르신에게 수치심을 줄 수 있어요. 공감하며 식사로 안내하는 것이 가장 효과적입니다.' },
+    { scene:'오후 3시입니다. 어르신이 "저녁 먹으러 가야 한다"며 일어나려 하십니다.',
+      confuse:'아까 점심을 드셨습니다. 창문 밖은 밝습니다.',
+      thought:'배가 부른 것 같기도 하고 고픈 것 같기도 해… 지금이 몇 시지? 밝으니까 낮이긴 한데…',
+      q:'어르신에게 어떻게 말씀드리는 것이 가장 적절할까요?',
+      opts:['"어르신, 지금은 오후 3시예요. 저녁은 6시에 먹어요" — 부드럽게 시간을 알려드린다','"점심 이미 드셨잖아요"라고 상기시킨다','아직 저녁 시간이 아니라고만 짧게 말한다','못 들은 척하고 하던 일을 계속한다'],
+      explain:'"방금 드셨잖아요"는 수치심을 줄 수 있어요. 지금 시간과 다음 식사 시간을 부드럽게 알려드리는 것이 효과적입니다.' },
+    { scene:'어르신이 자신의 방을 찾지 못하고 복도에서 서성이고 계십니다.',
+      confuse:'어르신은 이 시설에서 생활한 지 6개월이 됐습니다.',
+      thought:'이 복도는 우리 집 복도 같기도 하고… 내 방이 어디 있었지? 여기가 어딘지 모르겠어. 무서워.',
+      q:'복도에서 서성이는 어르신에게 어떻게 다가가는 것이 좋을까요?',
+      opts:['조용히 이름을 부르며 앞에서 다가가 함께 방으로 안내해드린다','멀리서 방 방향만 알려드린다','뒤에서 어깨를 잡고 방으로 모시고 간다','"방이 저쪽이에요"라고 손가락으로 가리킨다'],
+      explain:'뒤에서 갑자기 다가가면 어르신이 놀랄 수 있어요. 앞에서 이름을 부르며 함께 걸어가 안내해드리는 것이 중요합니다.' },
+    { scene:'어르신이 5분 전에 했던 질문을 다시 하십니다. "오늘 점심이 뭐예요?"',
+      confuse:'이미 메뉴를 알려드렸고, 식당 입구에 오늘의 메뉴판이 붙어 있습니다.',
+      thought:'아까 누가 뭐라고 했던 것 같은데… 뭐였지? 점심이 뭔지 아직 모르는데 물어봐야지.',
+      q:'같은 질문을 반복하는 어르신에게 어떻게 대응하는 것이 가장 좋을까요?',
+      opts:['짜증내지 않고 매번 처음인 것처럼 친절하게 다시 알려드린다','"아까 말씀드렸잖아요"라고 알려드린다','메뉴판을 가리키며 직접 보시라고 한다','식사 시간이 되면 알게 되실 거라고 한다'],
+      explain:'"아까 말씀드렸잖아요"는 어르신에게 수치심과 혼란을 줄 수 있어요. 매번 처음처럼 대해드리는 것이 핵심입니다.' },
+    { scene:'어르신이 "집에 가고 싶다"고 하십니다. 어르신은 현재 시설에서 생활 중입니다.',
+      confuse:'"집에 가고 싶다"는 말을 오늘만 10번 넘게 하셨습니다.',
+      thought:'여기는 내 집이 아니야… 우리 엄마가 기다리고 있는데. 아니 엄마는 돌아가셨나? 아니 살아계신 것 같은데… 집에 가야 해.',
+      q:'"집에 가고 싶다"는 어르신에게 어떻게 대응하면 좋을까요?',
+      opts:['감정에 공감하며 "어떤 것이 그리우세요?"라고 여쭤보고 함께 이야기 나눈다','"지금은 집에 가실 수 없어요"라고 사실을 말씀드린다','곧 가족이 데리러 온다고 말씀드린다','못 들은 척하고 다른 이야기로 넘어간다'],
+      explain:'"지금은 못 가요"보다 "어떤 게 그리우세요?"라는 질문이 어르신의 감정을 존중하는 대응입니다. 지킬 수 없는 약속은 더 큰 혼란을 줍니다.' },
+    { scene:'어르신이 아끼는 지갑이 없어졌다며 "누군가 훔쳐갔다"고 화를 내십니다.',
+      confuse:'지난주에도 같은 일이 있었고, 그때 지갑은 어르신 베개 밑에서 나왔습니다.',
+      thought:'분명히 여기 뒀는데 없어졌어. 어제도 있었는데… 그 직원이 수상해. 어젯밤에 내 방에 들어왔잖아.',
+      q:'어르신이 도난을 주장할 때 가장 먼저 해야 할 일은 무엇인가요?',
+      opts:['어르신의 감정에 공감한 뒤, 함께 차분하게 물건을 찾아드린다','"아무도 안 훔쳐갔어요"라고 분명하게 설명한다','"또 베개 밑에 두셨겠죠"라고 말한다','다른 직원을 의심하는 말에 맞장구친다'],
+      explain:'사실 여부를 먼저 따지면 어르신의 분노가 커집니다. 감정에 공감하는 것이 먼저, 물건 찾기는 그다음이에요.' },
+    { scene:'밤 2시, 어르신이 방에서 나와 "아침 식사하러 가야 한다"고 하십니다.',
+      confuse:'복도가 어둡고, 어르신은 잠옷 차림입니다.',
+      thought:'밥 먹으러 가야 하는데… 왜 이렇게 어둡지? 지금이 아침인가? 밥 못 먹으면 큰일 나는데.',
+      q:'새벽에 나오신 어르신에게 어떻게 말씀드리는 것이 좋을까요?',
+      opts:['"어르신, 지금 새벽 2시예요. 아침은 8시에 먹어요. 방까지 모셔다드릴게요"','"아직 아침 시간 아니에요"라고 말한다','방에 들어가시라고만 안내한다','"밥은 이미 드셨으니 주무세요"라고 한다'],
+      explain:'혼내거나 당황한 티를 내지 않는 것이 중요해요. 지금 시간을 부드럽게 알려드리고 안전하게 방까지 모셔다드리세요.' },
+  ];
+  const DAILY_REFLECT = ['상황이 헷갈릴 때 어떤 불안감이 들었나요? 어르신은 이런 혼란을 매일 겪습니다.','어르신이 같은 행동을 반복하거나 계속 확인하시는 이유가 이해되셨나요?','어르신이 혼란스러워하실 때 어떻게 안심시켜 드릴 수 있을지 생각해보세요.'];
+
+  let scenarioIndex = 0;   // 현재 탭(0~2: 기억 체험, 3: 일상 판단)
   let mathCorrectCount = 0;
+  // 탭을 바꾸면 진행 중이던 타이머가 이전 탭 화면을 다시 그리지 않도록, 탭 전환마다 runId를 올리고
+  // 모든 타이머 콜백은 자기 runId가 현재 값과 같을 때만 실행한다.
+  let runId = 0;
+  function later(fn, ms){ const id=runId; return setTimeout(()=>{ if(id===runId) fn(); }, ms); }
+  function every(fn, ms){ const id=runId; const h=setInterval(()=>{ if(id!==runId){ clearInterval(h); return; } fn(h); }, ms); return h; }
 
   function setBadge(text){ phaseBadge.textContent = text; }
   function scenario(){ return SCENARIOS[scenarioIndex]; }
-
-  // ---------------- INTRO (overall) ----------------
-  function renderIntro(){
-    setBadge('시작 전');
-    stage.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='18px';
-    wrap.innerHTML = `
-      <div class="eyebrow">MEMORY EXPERIENCE</div>
-      <h2 class="title">기억력 체험</h2>
-      <p class="desc">짧게 <b style="color:var(--ink)">외우고</b> → 잠깐 <b style="color:var(--ink)">다른 일을 하고</b> → 다시 <b style="color:var(--ink)">떠올려보는</b> ${SCENARIOS.length}가지 상황을 체험합니다.<br>인지선별검사(MMSE·MoCA 등)에서 쓰는 "등록 → 방해과제 → 지연회상" 구조를 참고했습니다.</p>
-      <button class="bigbtn" id="startBtn">체험 시작하기</button>
-    `;
-    stage.appendChild(wrap);
-    document.getElementById('startBtn').addEventListener('click', ()=>{ scenarioIndex=0; totalCorrect=0; totalMax=0; renderScenarioIntro(); });
+  // 탭별 마지막 점수 — 4가지를 모두 마치면 결과 화면에 전체 점수를 함께 보여준다 (다시 하면 갱신)
+  const TAB_NAMES = ['🛒 장보기','🗺️ 가는 길','💊 약 정리','🏠 일상 판단'];
+  const RESULTS = {};
+  function overallHTML(){
+    const done = TAB_NAMES.map((_,i)=>RESULTS[i]).filter(Boolean);
+    if(done.length < TAB_NAMES.length){
+      const left = TAB_NAMES.filter((_,i)=>!RESULTS[i]);
+      return `<div class="resultLists"><div class="rl"><b style="color:var(--amber);">전체 결과까지 ${left.length}개 남았어요</b>남은 체험: ${left.join(', ')}</div></div>`;
+    }
+    let sc=0, mx=0;
+    const rows = TAB_NAMES.map((n,i)=>{ const r=RESULTS[i]; sc+=r.s; mx+=r.max; return `<div style="display:flex;justify-content:space-between;"><span>${n}</span><span class="mono">${r.s} / ${r.max}</span></div>`; }).join('');
+    const pct = Math.round(sc/mx*100);
+    const msg = pct>=80 ? '잘 기억하고 판단하셨어요. 그래도 어르신께는 늘 천천히, 한 번에 하나씩 안내해 주세요.'
+              : pct>=50 ? '잠깐 다른 일을 하는 것만으로도 기억이 흐려졌죠? 어르신은 이런 순간을 매일 겪습니다.'
+              : '많이 어려우셨죠? 어르신께는 메모·반복 안내·공감이 꼭 필요합니다.';
+    return `<div class="reflect" style="border-left-color:var(--teal);">
+      <div class="rt" style="color:#7FC0BB;">전체 결과 · 4가지 체험</div>
+      <div class="resultScore" style="font-size:30px;text-align:center;margin:2px 0 8px;">${sc} / ${mx} <span style="font-size:16px;">(${pct}%)</span></div>
+      <div style="font-size:13px;color:var(--ink-dim);line-height:1.9;margin-bottom:8px;">${rows}</div>
+      <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.6;">${msg}</div>
+    </div>`;
   }
+  function reflectHTML(qs){
+    return `<div class="reflect"><div class="rt">체험 후 생각해보기</div>${qs.map(q=>`<div class="rq">${q}</div>`).join('')}</div>`;
+  }
+
+  function selectTab(i){
+    runId++;
+    scenarioIndex = i;
+    document.querySelectorAll('#tabs .tab').forEach(t=> t.classList.toggle('on', +t.dataset.tab===i));
+    stage.scrollTop = 0;
+    if(i===3) renderDailyIntro(); else renderScenarioIntro();
+  }
+  document.querySelectorAll('#tabs .tab').forEach(t=> t.addEventListener('click', ()=> selectTab(+t.dataset.tab)));
 
   function renderScenarioIntro(){
     const sc = scenario();
-    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 준비`);
+    setBadge('준비');
     stage.innerHTML = '';
     const wrap = document.createElement('div');
     wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='16px';
     wrap.innerHTML = `
-      <div class="eyebrow">SCENARIO ${scenarioIndex+1}</div>
+      <div class="eyebrow">MEMORY · ${scenarioIndex+1}</div>
       <h2 class="title">${sc.title}</h2>
       <p class="desc">${sc.studyLabel}</p>
+      <p class="desc" style="font-size:12px;color:var(--ink-faint);">짧게 <b style="color:var(--ink)">외우고</b> → 잠깐 <b style="color:var(--ink)">계산 문제</b>를 풀고 → 다시 <b style="color:var(--ink)">떠올려</b> 봅니다.<br>인지선별검사(MMSE·MoCA 등)의 "등록 → 방해과제 → 지연회상" 구조를 참고했습니다.</p>
       <button class="bigbtn" id="goStudy">외우기 시작</button>
     `;
     stage.appendChild(wrap);
@@ -192,7 +325,7 @@
   // ---------------- STUDY phase (with countdown ring) ----------------
   function renderStudy(){
     const sc = scenario();
-    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 암기`);
+    setBadge('암기');
     stage.innerHTML = '';
 
     const wrap = document.createElement('div');
@@ -232,7 +365,7 @@
     timerNum.textContent = remaining;
     ringFg.style.strokeDashoffset = 0;
 
-    const iv = setInterval(()=>{
+    every(iv=>{
       remaining--;
       timerNum.textContent = Math.max(0,remaining);
       ringFg.style.strokeDashoffset = circumference * (1 - remaining/total);
@@ -245,7 +378,7 @@
 
   // ---------------- INTERFERENCE phase (quick math x2) ----------------
   function renderInterference(){
-    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 방해과제`);
+    setBadge('방해과제');
     let qIndex = 0;
     const questions = [makeMathQ(), makeMathQ()];
 
@@ -272,7 +405,7 @@
             const correctBtn=[...wrap.querySelectorAll('.opt')].find(b=>+b.dataset.v===q.answer);
             if(correctBtn) correctBtn.classList.add('correct');
           }
-          setTimeout(()=>{ qIndex++; showQ(); }, 700);
+          later(()=>{ qIndex++; showQ(); }, 700);
         });
       });
     }
@@ -291,7 +424,7 @@
   // ---------------- RECALL phase ----------------
   function renderRecall(){
     const sc = scenario();
-    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 회상`);
+    setBadge('회상');
     stage.innerHTML = '';
     const wrap = document.createElement('div');
     wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='18px';
@@ -307,8 +440,17 @@
       [...wrap.querySelectorAll('.chip')].forEach(c=> c.addEventListener('click', ()=> c.classList.toggle('selected')));
       document.getElementById('submitBtn').addEventListener('click', ()=>{
         const selected = [...wrap.querySelectorAll('.chip.selected')].map(c=>c.dataset.w);
-        const correct = selected.filter(w=> sc.items.includes(w)).length;
-        finishScenario(correct, sc.items.length);
+        const hits = selected.filter(w=> sc.items.includes(w));
+        const wrong = selected.filter(w=> !sc.items.includes(w));
+        const missed = sc.items.filter(w=> !selected.includes(w));
+        // 다 고르면 만점이 되지 않도록 잘못 고른 개수만큼 뺀다
+        const score = Math.max(0, hits.length - wrong.length);
+        const lists = `<div class="resultLists">
+          <div class="rl"><b style="color:#7FC0BB;">맞게 고른 물건</b>${hits.join(', ')||'없음'}</div>
+          ${wrong.length?`<div class="rl"><b style="color:#E08A7D;">잘못 고른 물건 (비슷한 단어에 헷갈렸어요)</b>${wrong.join(', ')}</div>`:''}
+          ${missed.length?`<div class="rl"><b style="color:var(--amber);">놓친 물건</b>${missed.join(', ')}</div>`:''}
+        </div>`;
+        finishScenario(score, sc.items.length, lists);
       });
 
     } else if(sc.recallType==='numberinput'){
@@ -435,51 +577,128 @@
     }
   }
 
-  function finishScenario(correct, max){
-    totalCorrect += correct; totalMax += max;
-    setBadge(`${scenarioIndex+1}/${SCENARIOS.length} · 결과`);
+  function finishScenario(correct, max, extraHTML){
+    const sc = scenario();
+    RESULTS[scenarioIndex] = {s:correct, max};
+    setBadge('결과');
     stage.innerHTML = '';
+    stage.scrollTop = 0;
     const wrap = document.createElement('div');
     wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='14px';
-    const isLast = scenarioIndex === SCENARIOS.length-1;
     wrap.innerHTML = `
-      <div class="eyebrow">결과</div>
+      <div class="eyebrow">결과 · ${sc.title}</div>
       <div class="resultScore">${correct} / ${max}</div>
       <div class="resultLabel">중간에 계산 문제를 풀고 나니 기억이 흐려지지 않았나요?</div>
-      <button class="bigbtn" id="nextBtn">${isLast ? '결과 요약 보기' : '다음 체험'}</button>
-    `;
-    stage.appendChild(wrap);
-    document.getElementById('nextBtn').addEventListener('click', ()=>{
-      if(isLast){ renderSummary(); }
-      else { scenarioIndex++; renderScenarioIntro(); }
-    });
-  }
-
-  function renderSummary(){
-    setBadge('완료');
-    stage.innerHTML = '';
-    const pct = totalMax ? Math.round(totalCorrect/totalMax*100) : 0;
-    const wrap = document.createElement('div');
-    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='16px';
-    wrap.innerHTML = `
-      <div class="eyebrow">체험 종료</div>
-      <h2 class="title">${SCENARIOS.length}가지 상황을 모두 마쳤습니다</h2>
-      <div class="resultScore">${pct}%</div>
-      <div class="resultLabel">전체 회상 정확도 (${totalCorrect} / ${totalMax})</div>
+      ${extraHTML||''}
       <div class="note">
-        방금 겪은 "외우기 → 다른 일 하기 → 다시 떠올리기"는 실제 어르신이 일상에서 겪는 순간과 같습니다.<br><br>
-        <b>더 나은 응대 방법</b><br>
+        <b>이렇게 응대해 주세요</b><br>
         · 한 번에 하나씩, 짧게 안내해주세요<br>
         · 중요한 내용은 말로만 하지 말고 메모·문자로 함께 남겨주세요<br>
         · 이미 말한 내용을 다시 물어봐도 짜증내지 말고 차분히 반복해주세요
       </div>
-      <button class="ghostbtn" id="restartBtn">처음부터 다시</button>
+      ${reflectHTML(sc.reflect)}
+      ${overallHTML()}
+      <div class="btnRow">
+        <button class="ghostbtn" id="againBtn">다시 하기</button>
+        <button class="bigbtn" id="nextBtn">다음 체험 →</button>
+      </div>
     `;
     stage.appendChild(wrap);
-    document.getElementById('restartBtn').addEventListener('click', renderIntro);
+    document.getElementById('againBtn').addEventListener('click', ()=> selectTab(scenarioIndex));
+    document.getElementById('nextBtn').addEventListener('click', ()=> selectTab((scenarioIndex+1)%4));
   }
 
-  renderIntro();
+  // ---------------- 일상 판단 체험 ----------------
+  let dList = [], dIdx = 0, dResults = [];
+  function renderDailyIntro(){
+    setBadge('준비');
+    stage.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='16px';
+    wrap.innerHTML = `
+      <div class="eyebrow">DAILY JUDGMENT</div>
+      <h2 class="title">일상 판단 체험</h2>
+      <p class="desc">치매 어르신이 실제로 겪는 혼란스러운 일상 상황 ${DAILY.length}가지입니다.<br>어르신의 머릿속을 함께 들여다본 뒤, <b style="color:var(--ink)">사회복무요원으로서 어떻게 응대할지</b> 골라보세요.</p>
+      <p class="desc" style="font-size:12px;color:var(--ink-faint);">고르고 나면 왜 그 응대가 좋은지 해설이 나옵니다. 틀려도 괜찮아요 — 배우는 것이 목표입니다.</p>
+      <button class="bigbtn" id="dStart">체험 시작</button>
+    `;
+    stage.appendChild(wrap);
+    document.getElementById('dStart').addEventListener('click', ()=>{
+      dList = shuffle(DAILY.slice()); dIdx = 0; dResults = [];
+      renderDailyQ();
+    });
+  }
+  function renderDailyQ(){
+    if(dIdx>=dList.length){ renderDailyDone(); return; }
+    const d = dList[dIdx];
+    setBadge(`${dIdx+1}/${dList.length}`);
+    stage.innerHTML = '';
+    stage.scrollTop = 0;
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='12px'; wrap.style.width='100%';
+    const prog = dList.map((_,i)=>`<i class="${i<dIdx?(dResults[i]?'ok':'ng'):i===dIdx?'cur':''}"></i>`).join('');
+    wrap.innerHTML = `
+      <div class="dProg">${prog}</div>
+      <div class="dCard">
+        <div class="eyebrow">상황 ${dIdx+1}</div>
+        <div class="dScene">${d.scene}</div>
+        <div class="dMind"><div class="ml">💭 어르신의 머릿속</div>${d.confuse}<div class="th">"${d.thought}"</div></div>
+        <div class="dQ">${d.q}</div>
+        <div class="dOpts">${shuffle(d.opts.map((o,k)=>({o,k}))).map(x=>`<button class="dOpt" data-k="${x.k}">${x.o}</button>`).join('')}</div>
+        <div id="dFbWrap"></div>
+      </div>
+    `;
+    stage.appendChild(wrap);
+    const btns = [...wrap.querySelectorAll('.dOpt')];
+    btns.forEach(b=> b.addEventListener('click', ()=>{
+      if(btns[0].disabled) return;
+      btns.forEach(x=> x.disabled=true);
+      const ok = b.dataset.k==='0';
+      b.classList.add(ok?'correct':'wrong');
+      if(!ok) btns.find(x=>x.dataset.k==='0').classList.add('correct');
+      dResults[dIdx] = ok;
+      const fbWrap = document.getElementById('dFbWrap');
+      fbWrap.innerHTML = `<div class="dFb ${ok?'ok':'ng'}">${ok?'✅ 잘 하셨어요. ':'❌ 더 좋은 응대가 있어요. '}${d.explain}</div>
+        <div style="text-align:center;margin-top:12px;"><button class="bigbtn" id="dNext">${dIdx+1<dList.length?'다음 상황 →':'결과 보기'}</button></div>`;
+      document.getElementById('dNext').addEventListener('click', ()=>{ dIdx++; renderDailyQ(); });
+      fbWrap.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }));
+  }
+  function renderDailyDone(){
+    setBadge('결과');
+    stage.innerHTML = '';
+    stage.scrollTop = 0;
+    const right = dResults.filter(Boolean).length, total = dList.length;
+    RESULTS[3] = {s:right, max:total};
+    const pct = Math.round(right/total*100);
+    const msg = pct>=80 ? '어르신의 마음을 잘 이해하고 계세요. 현장에서도 이 태도를 지켜주세요.'
+              : pct>=50 ? '절반 넘게 맞히셨어요. 틀린 상황의 해설을 다시 떠올려 보세요.'
+              : '처음엔 어려울 수 있어요. 사실을 따지기보다 감정에 먼저 공감하는 것이 핵심입니다.';
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='14px';
+    wrap.innerHTML = `
+      <div class="eyebrow">결과 · 일상 판단 체험</div>
+      <div class="resultScore">${right} / ${total}</div>
+      <div class="resultLabel">${msg}</div>
+      <div class="note">
+        <b>기억해 주세요</b><br>
+        · "아까 말씀드렸잖아요", "방금 드셨잖아요"처럼 기억을 따지는 말은 피해주세요<br>
+        · 사실을 바로잡기보다 감정에 먼저 공감해주세요<br>
+        · 말로만 안심시키기보다 함께 확인하고, 앞에서 천천히 다가가 주세요
+      </div>
+      ${reflectHTML(DAILY_REFLECT)}
+      ${overallHTML()}
+      <div class="btnRow">
+        <button class="ghostbtn" id="againBtn">다시 하기</button>
+        <button class="bigbtn" id="nextBtn">다음 체험 →</button>
+      </div>
+    `;
+    stage.appendChild(wrap);
+    document.getElementById('againBtn').addEventListener('click', ()=> selectTab(3));
+    document.getElementById('nextBtn').addEventListener('click', ()=> selectTab(0));
+  }
+
+  selectTab(0);
 })();
 </script>
 </body>
