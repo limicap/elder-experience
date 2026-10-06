@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="기억력체험">
 <meta name="theme-color" content="#14181C">
-<title>기억력체험 · 어르신 기억력 체험</title>
+<title>기억력·집중력 체험 · 어르신 인지 체험</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
     background:var(--amber); padding:4px 9px; border-radius:5px; white-space:nowrap; }
 
   /* 체험별 탭 — 각 체험을 이어서가 아니라 원하는 것부터 따로 해볼 수 있게 */
-  #tabs{ flex-shrink:0; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:10px 12px; background:var(--bg-panel); border-bottom:1px solid var(--line); }
+  #tabs{ flex-shrink:0; display:grid; grid-template-columns:repeat(5,1fr); gap:5px; padding:10px 10px; background:var(--bg-panel); border-bottom:1px solid var(--line); }
   .tab{ background:var(--bg-panel-2); border:1.5px solid var(--line); border-radius:12px; padding:8px 2px 7px; color:var(--ink-dim);
     font-family:'Noto Sans KR',sans-serif; font-size:11.5px; font-weight:700; line-height:1.3; cursor:pointer; }
   .tab .ti{ display:block; font-size:17px; margin-bottom:2px; }
@@ -133,6 +133,18 @@
   .lvPill.on.l3{ border-color:var(--brick); color:#E08A7D; background:rgba(176,87,74,0.16); }
   .lvInfo{ font-size:12px; color:var(--ink-dim); background:var(--bg-panel-2); border:1px solid var(--line); border-radius:12px; padding:9px 14px; max-width:340px; line-height:1.6; }
 
+  /* 집중력(스트룹) */
+  .stWord{ font-size:46px; font-weight:900; letter-spacing:4px; min-height:70px; display:flex; align-items:center; justify-content:center; }
+  .stTv{ font-size:13px; font-weight:700; color:var(--ink-faint); background:var(--bg-panel-2); border:1px solid var(--line); border-radius:10px;
+    padding:6px 12px; min-height:30px; max-width:340px; width:100%; overflow:hidden; white-space:nowrap; }
+  .stBtns{ display:grid; grid-template-columns:repeat(2,1fr); gap:9px; max-width:340px; width:100%; }
+  .stBtn{ background:var(--bg-panel-2); border:1.5px solid var(--line); border-radius:12px; padding:13px 8px; font-size:15px; font-weight:700;
+    color:var(--ink); font-family:'Noto Sans KR',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .stBtn i{ width:14px; height:14px; border-radius:50%; display:inline-block; }
+  .stBtn.ok{ border-color:var(--teal); background:rgba(76,139,135,0.2); }
+  .stBtn.ng{ border-color:var(--brick); background:rgba(176,87,74,0.2); }
+  .stMeta{ font-size:12px; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; }
+
   /* 일상 판단 */
   .dProg{ display:flex; gap:4px; max-width:360px; width:100%; }
   .dProg i{ flex:1; height:5px; border-radius:3px; background:var(--bg-panel-2); }
@@ -157,7 +169,7 @@
 <div id="app">
   <div id="topbar">
     <a id="homeBtn" href="index.html">&#8592;</a>
-    <h1>기억력 체험</h1>
+    <h1>기억력·집중력 체험</h1>
     <span id="phaseBadge" class="mono">시작 전</span>
   </div>
   <div id="tabs">
@@ -165,6 +177,7 @@
     <button class="tab" data-tab="1"><span class="ti">&#128506;&#65039;</span>가는 길</button>
     <button class="tab" data-tab="2"><span class="ti">&#128138;</span>약 정리</button>
     <button class="tab" data-tab="3"><span class="ti">&#127968;</span>일상 판단</button>
+    <button class="tab" data-tab="4"><span class="ti">&#127912;</span>집중력</button>
   </div>
   <div id="stage"></div>
 </div>
@@ -297,6 +310,20 @@
       opts:['"어르신, 지금 새벽 2시예요. 아침은 8시에 먹어요. 방까지 모셔다드릴게요"','"아직 아침 시간 아니에요"라고 말한다','방에 들어가시라고만 안내한다','"밥은 이미 드셨으니 주무세요"라고 한다'],
       explain:'혼내거나 당황한 티를 내지 않는 것이 중요해요. 지금 시간을 부드럽게 알려드리고 안전하게 방까지 모셔다드리세요.' },
   ];
+  // 집중력(스트룹): 글자의 '뜻'이 아니라 '색깔'을 고른다. 각 단계 앞부분 3문제는 뜻과 색이 같은 연습 문제로,
+  // 뒷부분(뜻과 색이 다름)과 평균 반응 시간을 비교해 '헷갈려서 느려지는' 정도를 실제로 보여준다.
+  // 시간 제한이나 가짜 지연은 두지 않고, 단계별로 색 종류·버튼 섞기·방해 자막으로만 어렵게 한다.
+  const ST_COLORS = [
+    {name:'빨강', hex:'#E5534B'}, {name:'파랑', hex:'#4A8FE7'}, {name:'초록', hex:'#4CAF6A'},
+    {name:'노랑', hex:'#E8C547'}, {name:'보라', hex:'#A07FE0'}, {name:'주황', hex:'#F08A3C'}
+  ];
+  const ST_LEVELS = [null,
+    {colors:4, main:6, shuffleBtns:false, tv:false, info:'색 4가지 · 연습 3 + 본문제 6 · 버튼 위치 고정'},
+    {colors:5, main:8, shuffleBtns:true,  tv:false, info:'색 5가지 · 연습 3 + 본문제 8 · 문제마다 버튼 위치가 바뀜'},
+    {colors:6, main:9, shuffleBtns:true,  tv:true,  info:'색 6가지 · 연습 3 + 본문제 9 · 버튼 섞임 + 옆에서 TV 자막이 계속 바뀜'}
+  ];
+  const ST_TV = ['오늘 저녁 메뉴는 초록 나물','빨강 버스가 들어옵니다','파랑 하늘, 맑은 날씨','노랑 우산 챙기세요','보라 꽃 축제 개막','주황 단풍 절정'];
+  const ST_REFLECT = ['글자를 읽지 않으려 해도 저절로 읽혀서 헷갈리셨나요?','반응이 느려지는 것을 마음대로 조절할 수 없다는 것을 느끼셨나요?','어르신께 빠른 선택을 재촉하지 않고 충분한 시간을 드리는 것이 왜 중요한지 생각해보세요.'];
   const DAILY_REFLECT = ['상황이 헷갈릴 때 어떤 불안감이 들었나요? 어르신은 이런 혼란을 매일 겪습니다.','어르신이 같은 행동을 반복하거나 계속 확인하시는 이유가 이해되셨나요?','어르신이 혼란스러워하실 때 어떻게 안심시켜 드릴 수 있을지 생각해보세요.'];
 
   let scenarioIndex = 0;   // 현재 탭(0~2: 기억 체험, 3: 일상 판단)
@@ -327,7 +354,7 @@
     return run;
   }
   // 탭별 마지막 점수 — 4가지를 모두 마치면 결과 화면에 전체 점수를 함께 보여준다 (다시 하면 갱신)
-  const TAB_NAMES = ['🛒 장보기','🗺️ 가는 길','💊 약 정리','🏠 일상 판단'];
+  const TAB_NAMES = ['🛒 장보기','🗺️ 가는 길','💊 약 정리','🏠 일상 판단','🎨 집중력'];
   const RESULTS = {};
   function overallHTML(){
     const done = TAB_NAMES.map((_,i)=>RESULTS[i]).filter(Boolean);
@@ -342,7 +369,7 @@
               : pct>=50 ? '잠깐 다른 일을 하는 것만으로도 기억이 흐려졌죠? 어르신은 이런 순간을 매일 겪습니다.'
               : '많이 어려우셨죠? 어르신께는 메모·반복 안내·공감이 꼭 필요합니다.';
     return `<div class="reflect" style="border-left-color:var(--teal);">
-      <div class="rt" style="color:#7FC0BB;">전체 결과 · 4가지 체험</div>
+      <div class="rt" style="color:#7FC0BB;">전체 결과 · ${TAB_NAMES.length}가지 체험</div>
       <div class="resultScore" style="font-size:30px;text-align:center;margin:2px 0 8px;">${sc} / ${mx} <span style="font-size:16px;">(${pct}%)</span></div>
       <div style="font-size:13px;color:var(--ink-dim);line-height:1.9;margin-bottom:8px;">${rows}</div>
       <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.6;">${msg}</div>
@@ -357,7 +384,7 @@
     scenarioIndex = i;
     document.querySelectorAll('#tabs .tab').forEach(t=> t.classList.toggle('on', +t.dataset.tab===i));
     stage.scrollTop = 0;
-    if(i===3) renderDailyIntro(); else renderScenarioIntro();
+    if(i===3) renderDailyIntro(); else if(i===4) renderStroopIntro(); else renderScenarioIntro();
   }
   document.querySelectorAll('#tabs .tab').forEach(t=> t.addEventListener('click', ()=> selectTab(+t.dataset.tab)));
 
@@ -672,7 +699,7 @@
     `;
     stage.appendChild(wrap);
     document.getElementById('againBtn').addEventListener('click', ()=> selectTab(scenarioIndex));
-    document.getElementById('nextBtn').addEventListener('click', ()=> selectTab((scenarioIndex+1)%4));
+    document.getElementById('nextBtn').addEventListener('click', ()=> selectTab(scenarioIndex+1));
   }
 
   // ---------------- 일상 판단 체험 ----------------
@@ -756,12 +783,129 @@
       ${reflectHTML(DAILY_REFLECT)}
       ${overallHTML()}
       <div class="btnRow">
+        <button class="ghostbtn" id="againBtn">다시 하기</button>
+        <button class="bigbtn" id="nextBtn">다음 체험 →</button>
+      </div>
+    `;
+    stage.appendChild(wrap);
+    document.getElementById('againBtn').addEventListener('click', ()=> selectTab(3));
+    document.getElementById('nextBtn').addEventListener('click', ()=> selectTab(4));
+  }
+
+  // ---------------- 집중력(스트룹) 체험 ----------------
+  let stQs = [], stIdx = 0, stLog = [], stT0 = 0, stLevel = 1;
+  function renderStroopIntro(){
+    setBadge('준비');
+    stage.innerHTML = '';
+    const L = ST_LEVELS[level];
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='16px';
+    wrap.innerHTML = `
+      <div class="eyebrow">ATTENTION</div>
+      <h2 class="title">집중력 체험</h2>
+      <p class="desc">글자의 <b style="color:var(--ink)">뜻</b>이 아니라 <b style="color:var(--ink)">글자 색깔</b>을 고르세요.<br>
+        예: <span style="color:#4A8FE7;font-weight:900;">빨강</span> → 정답은 <b style="color:var(--ink)">파랑</b></p>
+      <div class="lvRow">${[1,2,3].map(l=>`<button class="lvPill l${l}${l===level?' on':''}" data-l="${l}">${'●'.repeat(l)} ${LEVEL_NAMES[l]}</button>`).join('')}</div>
+      <div class="lvInfo"><b style="color:var(--ink)">${LEVEL_NAMES[level]}</b> · ${L.info}<br><span style="color:var(--ink-faint)">시간 제한은 없어요. 처음 3문제는 뜻과 색이 같은 연습 문제예요.</span></div>
+      <p class="desc" style="font-size:12px;color:var(--ink-faint);">글자를 읽지 않으려 해도 뇌가 저절로 읽어버려서 헷갈리고 느려집니다. 치매가 진행되면 이렇게 방해를 참고 집중하는 힘이 더 약해져요.</p>
+      <button class="bigbtn" id="stStart">체험 시작</button>
+    `;
+    stage.appendChild(wrap);
+    wrap.querySelectorAll('.lvPill').forEach(b=> b.addEventListener('click', ()=>{ level = +b.dataset.l; renderStroopIntro(); }));
+    document.getElementById('stStart').addEventListener('click', startStroop);
+  }
+  function startStroop(){
+    stLevel = level;
+    const L = ST_LEVELS[stLevel], cols = ST_COLORS.slice(0, L.colors);
+    stQs = [];
+    for(let i=0;i<3;i++){ const c = cols[i % cols.length]; stQs.push({word:c.name, ink:c, congruent:true}); }
+    let prevWord = null;
+    for(let i=0;i<L.main;i++){
+      let w, ink;
+      do { w = cols[Math.floor(Math.random()*cols.length)]; ink = cols[Math.floor(Math.random()*cols.length)]; }
+      while(w.name===ink.name || w.name===prevWord);
+      prevWord = w.name;
+      stQs.push({word:w.name, ink, congruent:false});
+    }
+    stIdx = 0; stLog = [];
+    renderStroopQ();
+  }
+  function renderStroopQ(){
+    if(stIdx>=stQs.length){ renderStroopDone(); return; }
+    const L = ST_LEVELS[stLevel], cols = ST_COLORS.slice(0, L.colors);
+    const q = stQs[stIdx];
+    setBadge(`${stIdx+1}/${stQs.length}`);
+    stage.innerHTML = '';
+    const btnCols = L.shuffleBtns ? shuffle(cols.slice()) : cols;
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='16px'; wrap.style.width='100%';
+    wrap.innerHTML = `
+      <div class="eyebrow">${q.congruent ? '연습 문제' : '본 문제'} · 글자 색깔을 고르세요</div>
+      ${L.tv ? `<div class="stTv" id="stTv">📺 </div>` : ''}
+      <div class="stWord" style="color:${q.ink.hex};">${q.word}</div>
+      <div class="stBtns">${btnCols.map(c=>`<button class="stBtn" data-n="${c.name}"><i style="background:${c.hex}"></i>${c.name}</button>`).join('')}</div>
+      <div class="stMeta">${stIdx+1} / ${stQs.length}</div>
+    `;
+    stage.appendChild(wrap);
+    if(L.tv){
+      const tv = document.getElementById('stTv');
+      const tick = ()=>{ const t = ST_TV[Math.floor(Math.random()*ST_TV.length)]; const c = cols[Math.floor(Math.random()*cols.length)];
+        tv.innerHTML = `📺 <span style="color:${c.hex}">${t}</span>`; };
+      tick(); every(tick, 700);
+    }
+    stT0 = performance.now();
+    const btns = [...wrap.querySelectorAll('.stBtn')];
+    btns.forEach(b=> b.addEventListener('click', ()=>{
+      if(btns[0].disabled) return;
+      const ms = performance.now() - stT0;
+      btns.forEach(x=> x.disabled = true);
+      const ok = b.dataset.n === q.ink.name;
+      b.classList.add(ok ? 'ok' : 'ng');
+      if(!ok) btns.find(x=>x.dataset.n===q.ink.name).classList.add('ok');
+      stLog.push({ok, ms, congruent:q.congruent});
+      later(()=>{ stIdx++; renderStroopQ(); }, ok ? 350 : 800);
+    }));
+  }
+  function renderStroopDone(){
+    setBadge('결과');
+    stage.innerHTML = '';
+    stage.scrollTop = 0;
+    const main = stLog.filter(x=>!x.congruent), warm = stLog.filter(x=>x.congruent);
+    const right = main.filter(x=>x.ok).length, total = main.length;
+    RESULTS[4] = {s:right, max:total, lv:LEVEL_NAMES[stLevel]};
+    const avg = arr => arr.length ? arr.reduce((a,x)=>a+x.ms,0)/arr.length/1000 : 0;
+    const aW = avg(warm), aM = avg(main.filter(x=>x.ok).length ? main.filter(x=>x.ok) : main);
+    const slower = Math.max(0, aM - aW);
+    const ratio = aW>0 ? Math.round((aM/aW - 1)*100) : 0;
+    const msg = right===total ? '모두 맞히셨어요! 그래도 뜻과 색이 다를 때 더 오래 걸리지 않으셨나요?'
+              : right/total>=0.6 ? '글자가 저절로 읽혀서 몇 번 헷갈리셨죠? 어르신은 이런 방해를 매일 더 크게 느끼세요.'
+              : '많이 헷갈리셨죠? 치매 어르신은 주변 소리·글자 같은 방해 속에서 이런 판단을 하셔야 해요.';
+    const wrap = document.createElement('div');
+    wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='14px';
+    wrap.innerHTML = `
+      <div class="eyebrow">결과 · 집중력 체험 · ${LEVEL_NAMES[stLevel]}</div>
+      <div class="resultScore">${right} / ${total}</div>
+      <div class="resultLabel">본 문제(뜻과 색이 다른 문제) 정답 수</div>
+      <div class="resultLists">
+        <div class="rl"><b style="color:#7FC0BB;">뜻과 색이 같을 때 (연습)</b>평균 <span class="mono">${aW.toFixed(2)}초</span></div>
+        <div class="rl"><b style="color:#E08A7D;">뜻과 색이 다를 때 (본 문제)</b>평균 <span class="mono">${aM.toFixed(2)}초</span>${slower>0.05?` — 약 <b style="color:#E08A7D;display:inline;">${slower.toFixed(2)}초(${ratio}%) 더 느려졌어요</b>`:''}</div>
+      </div>
+      <div class="resultLabel">${msg}</div>
+      <div class="note">
+        <b>이렇게 응대해 주세요</b><br>
+        · "빨리 고르세요"처럼 재촉하지 말고 충분히 기다려 주세요<br>
+        · 선택지는 한 번에 2~3개로 줄여서 여쭤봐 주세요<br>
+        · TV·소음 등 주변 방해를 줄인 뒤 말씀드려 주세요
+      </div>
+      ${reflectHTML(ST_REFLECT)}
+      ${overallHTML()}
+      <div class="btnRow">
         <button class="bigbtn" id="againBtn">다시 하기</button>
       </div>
     `;
     stage.appendChild(wrap);
-    // 일상 판단이 마지막 탭이라 "다음 체험"은 두지 않는다
-    document.getElementById('againBtn').addEventListener('click', ()=> selectTab(3));
+    // 집중력이 마지막 탭이라 "다음 체험"은 두지 않는다
+    document.getElementById('againBtn').addEventListener('click', ()=> selectTab(4));
   }
 
   selectTab(0);
