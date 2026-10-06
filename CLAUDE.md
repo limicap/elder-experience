@@ -24,10 +24,13 @@ of aging for the visitor:
   and a guide line whose visible jitter simulates hand tremor at increasing
   severity across 3 mission sets. Per-set miss counts are shown on the
   victory screen (not summed across sets).
-- **memory.html** — 탭 4개(장보기·가는 길·약 정리·일상 판단)를 각각 따로 체험.
+- **memory.html** — 기억력·집중력 체험. 탭 5개(장보기·가는 길·약 정리·일상 판단·집중력)를 각각 따로 체험.
   앞의 3개는 암기 → 방해과제(계산) → 회상 구조, 일상 판단은 치매 어르신 상황 9개에
   대한 사회복무요원 응대 선택 + 해설. 결과 화면마다 '체험 후 생각해보기' 질문,
-  4가지를 모두 마치면 결과 화면에 전체 점수(`RESULTS`, 다시 하면 갱신).
+  모든 탭을 마치면 결과 화면에 전체 점수(`RESULTS`, 다시 하면 갱신). 장보기·가는 길·약 정리는
+  초기·중기·말기 단계 선택(외우는 시간은 크게 줄이지 않고 항목 수·비슷한 보기·계산 문제 수로 조절).
+  집중력 탭은 스트룹(글자 뜻이 아닌 색 고르기): 연습 3문제(뜻=색) 뒤 본문제, 두 구간 평균 반응 시간을
+  비교해 보여준다. 단계는 색 종류·버튼 섞기·방해 자막으로만 조절(시간 제한·가짜 지연 없음).
   탭 전환 시 `runId`로 진행 중 타이머를 무효화한다.
 
 Shared design tokens live in `assets/css/theme.css`. Pages are IIFE-scoped;
