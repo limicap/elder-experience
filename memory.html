@@ -479,19 +479,24 @@
         <div class="desc">${qIndex+1} / ${questions.length}번째 문제</div>
         <div class="mathQ">${q.text} = ?</div>
         <div class="optRow">${q.options.map(o=>`<button class="opt" data-v="${o}">${o}</button>`).join('')}</div>
+        <div class="desc" id="mathMsg" style="min-height:20px;"></div>
       `;
       stage.appendChild(wrap);
+      // 아무거나 눌러 넘어가지 못하도록, 맞힐 때까지 다음 문제로 넘어가지 않는다
+      // (틀린 보기만 비활성화하고 정답은 알려주지 않는다)
+      const msg = wrap.querySelector('#mathMsg');
       [...wrap.querySelectorAll('.opt')].forEach(btn=>{
         btn.addEventListener('click', ()=>{
           const v = +btn.dataset.v;
-          [...wrap.querySelectorAll('.opt')].forEach(b=>b.style.pointerEvents='none');
-          if(v===q.answer){ btn.classList.add('correct'); mathCorrectCount++; }
-          else {
-            btn.classList.add('wrong');
-            const correctBtn=[...wrap.querySelectorAll('.opt')].find(b=>+b.dataset.v===q.answer);
-            if(correctBtn) correctBtn.classList.add('correct');
+          if(v===q.answer){
+            [...wrap.querySelectorAll('.opt')].forEach(b=>b.style.pointerEvents='none');
+            btn.classList.add('correct'); mathCorrectCount++;
+            msg.textContent = '✅ 정답이에요';
+            later(()=>{ qIndex++; showQ(); }, 600);
+          } else {
+            btn.classList.add('wrong'); btn.style.pointerEvents='none';
+            msg.textContent = '❌ 틀렸어요. 다시 계산해서 골라주세요';
           }
-          later(()=>{ qIndex++; showQ(); }, 700);
         });
       });
     }
@@ -617,7 +622,7 @@
           <div class="slotBox" data-time="${t}"><div class="slotLabel">${t}</div><div class="slotPills" id="slot-${t}"></div></div>
         `).join('')}</div>
         <div class="chipGrid" id="pillPool">${pool.map(p=>`<div class="pillChip" data-id="${p.id}" data-decoy="${p.decoy}"><span class="rxDot" style="background:${p.color}"></span>${p.name}</div>`).join('')}</div>
-        <div class="desc" id="pillMsg" style="min-height:18px;">약을 먼저 고른 뒤, 시간대를 눌러 넣으세요.</div>
+        <div class="desc" id="pillMsg" style="min-height:18px;">약을 먼저 고른 뒤, 시간대를 눌러 넣으세요. 잘못 넣은 약은 칸 안의 동그라미를 누르면 빠져요.</div>
         <button class="bigbtn" id="submitBtn" disabled style="opacity:.4;">회상 완료</button>
       `;
       stage.appendChild(wrap);
@@ -640,6 +645,13 @@
           msgEl.textContent = `✅ ${m.name} 선택됨 — 시간대를 눌러 넣으세요.`;
         });
       });
+      // 회상 완료는 약을 하나라도 넣으면 누를 수 있다 — 말기에는 진짜·가짜 약을 구별하기 어려워
+      // 진짜 약을 가짜로 여기고 남겨두는 경우가 있는데, 그때도 막히지 않고 결과에서 '빠뜨린 약'으로 보여준다
+      function updateSubmit(){
+        const any = Object.keys(placed).length > 0;
+        submitBtn.disabled = !any; submitBtn.style.opacity = any ? 1 : .4;
+      }
+      const poolEl = wrap.querySelector('#pillPool');
       wrap.querySelectorAll('.slotBox').forEach(box=>{
         box.addEventListener('click', ()=>{
           if(!selectedId) return;
@@ -648,12 +660,22 @@
           placed[selectedId] = time;
           const dot = document.createElement('div');
           dot.className = 'slotPill'; dot.style.background = m.color; dot.title = m.name;
+          const chipEl = selectedEl, pid = selectedId;
+          // 넣은 약을 다시 누르면 빼서 목록으로 되돌린다 (잘못 넣은 것을 고칠 수 있게)
+          // 단, 약을 고른 상태에서는 칸 안 어디를 눌러도(이미 넣은 약 위라도) '넣기'로 처리한다
+          dot.addEventListener('click', ev=>{
+            if(selectedId) return;
+            ev.stopPropagation();
+            dot.remove(); delete placed[pid];
+            chipEl.classList.remove('selected'); poolEl.appendChild(chipEl);
+            msgEl.textContent = `${m.name}을(를) 다시 뺐어요.`;
+            updateSubmit();
+          });
           box.querySelector('.slotPills').appendChild(dot);
           selectedEl.remove();
           clearSelection();
           msgEl.textContent = `${m.name}을(를) ${time}에 넣었습니다.`;
-          const realLeft = wrap.querySelectorAll('#pillPool .pillChip[data-decoy="false"]').length;
-          if(realLeft===0){ submitBtn.disabled=false; submitBtn.style.opacity=1; }
+          updateSubmit();
         });
       });
       submitBtn.addEventListener('click', ()=>{
@@ -663,7 +685,7 @@
         correct = Math.max(0, correct - wrongPills.length);
         const missedMeds = sc.meds.filter(m=> placed[m.id]!==m.time).map(m=>`${m.name}(${m.time})`);
         const lists = (wrongPills.length||missedMeds.length) ? `<div class="resultLists">
-          ${missedMeds.length?`<div class="rl"><b style="color:var(--amber);">시간을 잘못 넣은 약 (정답)</b>${missedMeds.join(', ')}</div>`:''}
+          ${missedMeds.length?`<div class="rl"><b style="color:var(--amber);">시간을 잘못 넣거나 빠뜨린 약 (정답)</b>${missedMeds.join(', ')}</div>`:''}
           ${wrongPills.length?`<div class="rl"><b style="color:#E08A7D;">처방전에 없던 가짜 약을 넣었어요</b>${wrongPills.map(d=>d.name).join(', ')} — 이름과 색이 비슷해 헷갈리셨죠?</div>`:''}
         </div>` : '';
         finishScenario(correct, sc.meds.length, lists);
